@@ -40,6 +40,9 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 
 			case MotionEvent.ACTION_POINTER_UP: // second finger lifted
 			case MotionEvent.ACTION_UP: // first finger lifted
+				if (mode == CurrentAction.DRAG && matrixBeforeAction.equals(newMatrix)) {
+					v.performClick();
+				}
 				mode = CurrentAction.NONE;
 				Log.d(TAG, "mode=NONE");
 				break;
