@@ -14,7 +14,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import androidx.appcompat.widget.AppCompatImageView;
 import ch.laurinmurer.selecator.helper.BitmapLoader;
-import ch.laurinmurer.selecator.helper.ZoomInZoomOut;
+import com.github.chrisbanes.photoview.PhotoView;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -170,10 +170,9 @@ public class FirstFragmentSide {
 		builder.setOnDismissListener(dialogInterface -> {
 		});
 
-		ImageView imageView = new ImageView(context);
+		PhotoView imageView = new PhotoView(context);
 		imageView.setImageURI(image);
 		imageView.setOnClickListener(v -> builder.dismiss());
-		imageView.setOnTouchListener(new ZoomInZoomOut());
 		builder.addContentView(imageView, new RelativeLayout.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
 				ViewGroup.LayoutParams.MATCH_PARENT));
