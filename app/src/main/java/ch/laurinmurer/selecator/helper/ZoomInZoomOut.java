@@ -6,6 +6,11 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
+
 public class ZoomInZoomOut implements View.OnTouchListener {
 
 	// These matrices will be used to scale points of the image
@@ -18,11 +23,17 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 	private final PointF firstTouchPoint = new PointF();
 	private final PointF middleBetweenInitialTouchPoints = new PointF();
 	private float distanceBetweenInitialTouchPoints = 1f;
+	private final Map<ImageView, MinValues> minValuesToViews = new HashMap<>();
 
 	@Override
 	public boolean onTouch(View v, MotionEvent event) {
 		ImageView view = (ImageView) v;
 		view.setScaleType(ImageView.ScaleType.MATRIX);
+		minValuesToViews.computeIfAbsent(view, viewFirstTouched -> {
+			float[] matrixValues = new float[9];
+			viewFirstTouched.getImageMatrix().getValues(matrixValues);
+			return new MinValues(matrixValues[Matrix.MSCALE_X]);
+		});
 
 		switch (event.getAction() & MotionEvent.ACTION_MASK) {
 			case MotionEvent.ACTION_DOWN:   // first finger down only
@@ -65,6 +76,11 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 						// matrix...if scale > 1 means
 						// zoom in...if scale < 1 means
 						// zoom out
+						float minScaleBeforeAnyAction = requireNonNull(minValuesToViews.get(v)).getMinScale();
+						float currentMinScale = minScaleBeforeAnyAction / getScale(newMatrix);
+						if (scale < currentMinScale) {
+							scale = currentMinScale;
+						}
 						newMatrix.postScale(scale, scale, middleBetweenInitialTouchPoints.x, middleBetweenInitialTouchPoints.y);
 					}
 				}
@@ -74,6 +90,12 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 		view.setImageMatrix(newMatrix); // display the transformation on screen
 
 		return true; // indicate event was handled
+	}
+
+	private static float getScale(Matrix matrix) {
+		float[] values = new float[9];
+		matrix.getValues(values);
+		return values[Matrix.MSCALE_X];
 	}
 
 	/*
@@ -97,4 +119,16 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 
 	// The 3 states (events) which the user is trying to perform
 	private enum CurrentAction {NONE, DRAG, ZOOM}
+
+	private static class MinValues {
+		private final float minScale;
+
+		private MinValues(float minScale) {
+			this.minScale = minScale;
+		}
+
+		public float getMinScale() {
+			return minScale;
+		}
+	}
 }
