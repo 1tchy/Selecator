@@ -22,7 +22,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -39,16 +42,18 @@ public class FirstFragmentSide {
 	private final Runnable afterPathSet;
 	private final Context context;
 	private final Consumer<Runnable> onUiThreadRunner;
+	private final AtomicBoolean canFilesNowBeLoaded;
 	private final ExecutorService imageLoaderExecutor = Executors.newSingleThreadExecutor();
 	private Path path;
 
-	public FirstFragmentSide(TextView pathLabel, ViewGroup imagesViewGroup, View.OnTouchListener swipeListener, Runnable afterPathSet, Context context, Consumer<Runnable> onUiThreadRunner) {
+	public FirstFragmentSide(TextView pathLabel, ViewGroup imagesViewGroup, View.OnTouchListener swipeListener, Runnable afterPathSet, Context context, Consumer<Runnable> onUiThreadRunner, AtomicBoolean canFilesNowBeLoaded) {
 		this.pathLabel = pathLabel;
 		this.imagesViewGroup = imagesViewGroup;
 		this.swipeListener = swipeListener;
 		this.afterPathSet = afterPathSet;
 		this.context = context;
 		this.onUiThreadRunner = onUiThreadRunner;
+		this.canFilesNowBeLoaded = canFilesNowBeLoaded;
 	}
 
 	public boolean hasValidDirectorySelected() {
@@ -68,12 +73,26 @@ public class FirstFragmentSide {
 	}
 
 	public void setPathVariables(File newPath) {
-		pathLabel.setText(newPath.getName());
-		path = newPath.toPath();
-		afterPathSet.run();
+		if (!newPath.toPath().equals(path)) {
+			pathLabel.setText(newPath.getName());
+			path = newPath.toPath();
+			afterPathSet.run();
+			removeAllImagesFromView();
+			if (canFilesNowBeLoaded.get()) {
+				loadFilesInNewThread();
+			}
+		}
 	}
 
-	public void loadFiles() {
+	private void removeAllImagesFromView() {
+		synchronousImagesViewGroupList.clear();
+		List<View> allImages = IntStream.range(0, imagesViewGroup.getChildCount())
+				.mapToObj(imagesViewGroup::getChildAt)
+				.collect(Collectors.toList());
+		onUiThreadRunner.accept(() -> allImages.forEach(imagesViewGroup::removeView));
+	}
+
+	public void loadFilesInNewThread() {
 		if (path != null && path.toFile().isDirectory()) {
 			imageLoaderExecutor.submit(() -> loadImages(path.toFile().listFiles(), swipeListener));
 		}

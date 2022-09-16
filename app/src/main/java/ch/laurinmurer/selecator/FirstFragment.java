@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FirstFragment extends Fragment {
 
@@ -33,7 +34,7 @@ public class FirstFragment extends Fragment {
 	private View.OnTouchListener rightToLeftSwipeListener;
 	private FirstFragmentSide fromSide;
 	private FirstFragmentSide toSide;
-	private boolean isResume = false;
+	private final AtomicBoolean canFilesNowBeLoaded = new AtomicBoolean(false);
 
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -73,13 +74,15 @@ public class FirstFragment extends Fragment {
 				leftToRightSwipeListener,
 				this::checkIntroductionStillNeeded,
 				requireContext(),
-				requireActivity()::runOnUiThread);
+				requireActivity()::runOnUiThread,
+				canFilesNowBeLoaded);
 		toSide = new FirstFragmentSide(binding.toPath,
 				binding.toScrollViewLayout,
 				rightToLeftSwipeListener,
 				this::checkIntroductionStillNeeded,
 				requireContext(),
-				requireActivity()::runOnUiThread);
+				requireActivity()::runOnUiThread,
+				canFilesNowBeLoaded);
 
 		checkPermissionMissing();
 		restorePreferences(requireContext());
@@ -93,8 +96,8 @@ public class FirstFragment extends Fragment {
 			public void onGlobalLayout() {
 				view.getViewTreeObserver().removeOnGlobalLayoutListener(this);
 				//After the view is fully loaded
+				canFilesNowBeLoaded.set(true);
 				loadAllFiles();
-				isResume = true;
 			}
 		});
 	}
@@ -102,7 +105,7 @@ public class FirstFragment extends Fragment {
 	@Override
 	public void onResume() {
 		super.onResume();
-		if (isResume) {
+		if (canFilesNowBeLoaded.get()) {
 			loadAllFiles();
 		}
 	}
@@ -150,13 +153,11 @@ public class FirstFragment extends Fragment {
 	private void setFromPath(File path, Context context) {
 		fromSide.setPathVariables(path);
 		savePreferences(context);
-		fromSide.loadFiles();
 	}
 
 	private void setToPath(File path, Context context) {
 		toSide.setPathVariables(path);
 		savePreferences(context);
-		toSide.loadFiles();
 	}
 
 	private void checkIntroductionStillNeeded() {
@@ -166,8 +167,8 @@ public class FirstFragment extends Fragment {
 	}
 
 	private void loadAllFiles() {
-		fromSide.loadFiles();
-		toSide.loadFiles();
+		fromSide.loadFilesInNewThread();
+		toSide.loadFilesInNewThread();
 	}
 
 	@SuppressWarnings("unused")
