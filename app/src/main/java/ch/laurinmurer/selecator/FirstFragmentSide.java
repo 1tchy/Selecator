@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -94,7 +95,7 @@ public class FirstFragmentSide {
 
 	public void loadFilesInNewThread() {
 		if (path != null && path.toFile().isDirectory()) {
-			imageLoaderExecutor.submit(() -> loadImages(path.toFile().listFiles(), swipeListener));
+			imageLoaderExecutor.submit(() -> logExceptions(() -> loadImages(path.toFile().listFiles(), swipeListener)));
 		}
 	}
 
@@ -155,7 +156,7 @@ public class FirstFragmentSide {
 	}
 
 	private boolean alreadyContainsImage(File image) {
-		for (AppCompatImageView aChild : synchronousImagesViewGroupList) {
+		for (AppCompatImageView aChild : new ArrayList<>(synchronousImagesViewGroupList)) {
 			if (aChild.getHeight() > 0 && Objects.requireNonNull(imageMetadata.get(aChild)).getFile().getAbsolutePath().equals(image.getAbsolutePath())) {
 				return true;
 			}
@@ -189,6 +190,15 @@ public class FirstFragmentSide {
 			}
 		}
 		return synchronousImagesViewGroupList.size();
+	}
+
+	private static void logExceptions(Runnable runnable) {
+		try {
+			runnable.run();
+		} catch (RuntimeException e) {
+			Log.e("Exception", e.getLocalizedMessage(), e);
+			throw e;
+		}
 	}
 
 	private static class ImageMetadata {
