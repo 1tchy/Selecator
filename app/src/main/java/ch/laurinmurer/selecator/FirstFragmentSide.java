@@ -33,10 +33,11 @@ public class FirstFragmentSide {
 	)));
 	private final TextView pathLabel;
 	private final ViewGroup imagesViewGroup;
+	private final List<AppCompatImageView> synchronousImagesViewGroupList = Collections.synchronizedList(new ArrayList<>());
+	private final Map<AppCompatImageView, ImageMetadata> imageMetadata = new ConcurrentHashMap<>();
 	private final View.OnTouchListener swipeListener;
 	private final Runnable afterPathSet;
 	private final Context context;
-	private final Map<AppCompatImageView, ImageMetadata> imageMetadata = new ConcurrentHashMap<>();
 	private final Consumer<Runnable> onUiThreadRunner;
 	private final ExecutorService imageLoaderExecutor = Executors.newSingleThreadExecutor();
 	private Path path;
@@ -124,14 +125,19 @@ public class FirstFragmentSide {
 			newImage.setOnClickListener(v -> showImage(Uri.fromFile(anImage)));
 			newImage.setOnTouchListener(swipeListener);
 			imageMetadata.put(newImage, new ImageMetadata(anImage, anImage.lastModified()));
-			onUiThreadRunner.accept(() -> imagesViewGroup.addView(newImage, calculateNewIndex(newImage)));
+			onUiThreadRunner.accept(() -> addImageToView(newImage));
 		}
 	}
 
+	private void addImageToView(AppCompatImageView newImage) {
+		int index = calculateNewIndex(newImage);
+		synchronousImagesViewGroupList.add(index, newImage);
+		imagesViewGroup.addView(newImage, index);
+	}
+
 	private boolean alreadyContainsImage(File image) {
-		for (int index = 0; index < imagesViewGroup.getChildCount(); index++) {
-			AppCompatImageView childAt = (AppCompatImageView) imagesViewGroup.getChildAt(index);
-			if (childAt.getHeight() > 0 && Objects.requireNonNull(imageMetadata.get(childAt)).getFile().getAbsolutePath().equals(image.getAbsolutePath())) {
+		for (AppCompatImageView aChild : synchronousImagesViewGroupList) {
+			if (aChild.getHeight() > 0 && Objects.requireNonNull(imageMetadata.get(aChild)).getFile().getAbsolutePath().equals(image.getAbsolutePath())) {
 				return true;
 			}
 		}
@@ -157,14 +163,14 @@ public class FirstFragmentSide {
 
 	private int calculateNewIndex(AppCompatImageView newImage) {
 		long lastModifiedOfNewImage = Objects.requireNonNull(imageMetadata.get(newImage)).getLastModified();
-		for (int index = 0; index < imagesViewGroup.getChildCount(); index++) {
-			AppCompatImageView childAt = (AppCompatImageView) imagesViewGroup.getChildAt(index);
+		for (int index = 0; index < synchronousImagesViewGroupList.size(); index++) {
+			AppCompatImageView childAt = synchronousImagesViewGroupList.get(index);
 			long lastModifiedOfChildAt = Objects.requireNonNull(imageMetadata.get(childAt)).getLastModified();
 			if (lastModifiedOfChildAt < lastModifiedOfNewImage) {
 				return index;
 			}
 		}
-		return imagesViewGroup.getChildCount();
+		return synchronousImagesViewGroupList.size();
 	}
 
 	private static class ImageMetadata {
