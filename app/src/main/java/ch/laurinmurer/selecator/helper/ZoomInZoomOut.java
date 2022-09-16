@@ -2,13 +2,11 @@ package ch.laurinmurer.selecator.helper;
 
 import android.graphics.Matrix;
 import android.graphics.PointF;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 
 public class ZoomInZoomOut implements View.OnTouchListener {
-	private static final String TAG = "Touch";
 
 	// These matrices will be used to scale points of the image
 	private final Matrix newMatrix = new Matrix();
@@ -26,15 +24,11 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 		ImageView view = (ImageView) v;
 		view.setScaleType(ImageView.ScaleType.MATRIX);
 
-		dumpEvent(event);
-		// Handle touch events here...
-
 		switch (event.getAction() & MotionEvent.ACTION_MASK) {
 			case MotionEvent.ACTION_DOWN:   // first finger down only
 				newMatrix.set(view.getImageMatrix());
 				matrixBeforeAction.set(newMatrix);
 				firstTouchPoint.set(event.getX(), event.getY());
-				Log.d(TAG, "mode=DRAG");
 				mode = CurrentAction.DRAG;
 				break;
 
@@ -44,12 +38,10 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 					v.performClick();
 				}
 				mode = CurrentAction.NONE;
-				Log.d(TAG, "mode=NONE");
 				break;
 
 			case MotionEvent.ACTION_POINTER_DOWN: // first and second finger down
 				distanceBetweenInitialTouchPoints = spacing(event);
-				Log.d(TAG, "distanceBetweenInitialTouchPoints=" + distanceBetweenInitialTouchPoints);
 				if (distanceBetweenInitialTouchPoints > 5f) {
 					matrixBeforeAction.set(newMatrix);
 					middleBetweenInitialTouchPoints.set(
@@ -57,7 +49,6 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 							(event.getY(0) + event.getY(1)) / 2
 					);
 					mode = CurrentAction.ZOOM;
-					Log.d(TAG, "mode=ZOOM");
 				}
 				break;
 
@@ -68,7 +59,6 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 				} else if (mode == CurrentAction.ZOOM) {
 					// pinch zooming
 					float newDist = spacing(event);
-					Log.d(TAG, "newDist=" + newDist);
 					if (newDist > 5f) {
 						newMatrix.set(matrixBeforeAction);
 						float scale = newDist / distanceBetweenInitialTouchPoints; // setting the scaling of the
@@ -104,35 +94,6 @@ public class ZoomInZoomOut implements View.OnTouchListener {
 	 * Description: calculates the midpoint between the two fingers
 	 * ------------------------------------------------------------
 	 */
-
-	/**
-	 * Show an event in the LogCat view, for debugging
-	 */
-	private void dumpEvent(MotionEvent event) {
-		String[] names = {"DOWN", "UP", "MOVE", "CANCEL", "OUTSIDE", "POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?"};
-		StringBuilder sb = new StringBuilder();
-		int action = event.getAction();
-		int actionCode = action & MotionEvent.ACTION_MASK;
-		sb.append("event ACTION_").append(names[actionCode]);
-
-		if (actionCode == MotionEvent.ACTION_POINTER_DOWN || actionCode == MotionEvent.ACTION_POINTER_UP) {
-			sb.append("(pid ").append(action >> MotionEvent.ACTION_POINTER_INDEX_SHIFT);
-			sb.append(")");
-		}
-
-		sb.append("[");
-		for (int i = 0; i < event.getPointerCount(); i++) {
-			sb.append("#").append(i);
-			sb.append("(pid ").append(event.getPointerId(i));
-			sb.append(")=").append((int) event.getX(i));
-			sb.append(",").append((int) event.getY(i));
-			if (i + 1 < event.getPointerCount())
-				sb.append(";");
-		}
-
-		sb.append("]");
-		Log.d("Touch Events ---------", sb.toString());
-	}
 
 	// The 3 states (events) which the user is trying to perform
 	private enum CurrentAction {NONE, DRAG, ZOOM}
