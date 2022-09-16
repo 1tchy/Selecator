@@ -5,15 +5,28 @@ plugins {
 android {
     compileSdk 32
 
-    defaultConfig {
-        applicationId "ch.laurinmurer.selecator"
-        minSdk 30
-        targetSdk 32
-        versionCode 1
-        versionName "1.0"
+    def versionPropsFile = file('version.properties')
+    if (versionPropsFile.canRead()) {
+        Properties versionProps = new Properties()
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        versionProps.load(new FileInputStream(versionPropsFile))
+        def name = versionProps['VERSION_NAME']
+        def code = versionProps['VERSION_CODE'].toInteger()
+
+        defaultConfig {
+            applicationId "ch.laurinmurer.selecator"
+            minSdk 30
+            targetSdk 32
+            versionCode code
+            versionName name
+
+            testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        }
+    } else {
+        throw new GradleException("Could not read version.properties!")
     }
+
+    increaseVersionCode()
 
     buildTypes {
         release {
@@ -27,6 +40,27 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+}
+
+def increaseVersionCode() {
+    gradle.taskGraph.whenReady { taskGraph ->
+        if (taskGraph.hasTask(bundleRelease)) {
+            /* when run release task */
+            def versionPropsFile = file('version.properties')
+            if (versionPropsFile.canRead()) {
+                Properties versionProps = new Properties()
+
+                versionProps.load(new FileInputStream(versionPropsFile))
+
+                def code = versionProps['VERSION_CODE'].toInteger() + 10
+
+                versionProps['VERSION_CODE'] = code.toString()
+                versionProps.store(versionPropsFile.newWriter(), null)
+            } else {
+                throw new GradleException("Could not read version.properties!")
+            }
+        }
     }
 }
 
