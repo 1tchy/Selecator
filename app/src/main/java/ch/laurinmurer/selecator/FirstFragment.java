@@ -167,8 +167,10 @@ public class FirstFragment extends Fragment {
 	}
 
 	private void loadAllFiles() {
-		fromSide.loadFilesInNewThread();
-		toSide.loadFilesInNewThread();
+		if (fromSide != null && toSide != null) {
+			fromSide.loadFilesInNewThread();
+			toSide.loadFilesInNewThread();
+		}
 	}
 
 	@SuppressWarnings("unused")
