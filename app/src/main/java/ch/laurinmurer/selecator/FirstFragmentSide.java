@@ -26,7 +26,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -78,36 +77,50 @@ public class FirstFragmentSide {
 			pathLabel.setText(newPath.getName());
 			path = newPath.toPath();
 			afterPathSet.run();
-			removeAllImagesFromView();
 			if (canFilesNowBeLoaded.get()) {
 				loadFilesInNewThread();
 			}
 		}
 	}
 
-	private void removeAllImagesFromView() {
-		synchronousImagesViewGroupList.clear();
-		List<View> allImages = IntStream.range(0, imagesViewGroup.getChildCount())
-				.mapToObj(imagesViewGroup::getChildAt)
-				.collect(Collectors.toList());
-		onUiThreadRunner.accept(() -> allImages.forEach(imagesViewGroup::removeView));
-	}
-
 	public void loadFilesInNewThread() {
 		if (path != null && path.toFile().isDirectory()) {
-			imageLoaderExecutor.submit(() -> logExceptions(() -> loadImages(path.toFile().listFiles(), swipeListener)));
+			imageLoaderExecutor.submit(() -> logExceptions(() -> {
+				File[] filesInPath = listImagesOnDisk();
+				removeImagesNoMoreOnDisk(filesInPath);
+				loadImages(filesInPath);
+			}));
 		}
 	}
 
-	private void loadImages(File[] filesInPath, View.OnTouchListener swipeListener) {
-		if (filesInPath != null) {
-			Arrays.stream(filesInPath)
-					.filter(File::isFile)
-					.filter(f -> !f.getName().startsWith("."))
-					.filter(f -> hasASupportedSuffix(f.getName()))
-					.sorted(Comparator.comparingLong(File::lastModified).reversed())
-					.forEach(anImage -> loadImage(swipeListener, anImage));
+	private File[] listImagesOnDisk() {
+		File[] filesInPath = path.toFile().listFiles();
+		if (filesInPath == null) {
+			filesInPath = new File[0];
 		}
+		return filesInPath;
+	}
+
+	private void removeImagesNoMoreOnDisk(File[] filesInPath) {
+		Set<String> filesOnDisk = Arrays.stream(filesInPath)
+				.map(File::getAbsolutePath)
+				.collect(Collectors.toSet());
+		for (int index = synchronousImagesViewGroupList.size() - 1; index >= 0; index--) {
+			AppCompatImageView imageView = synchronousImagesViewGroupList.get(index);
+			if (!filesOnDisk.contains(requireNonNull(imageMetadata.get(imageView)).getFile().getAbsolutePath())) {
+				synchronousImagesViewGroupList.remove(index);
+				onUiThreadRunner.accept(() -> imagesViewGroup.removeView(imageView));
+			}
+		}
+	}
+
+	private void loadImages(File[] filesInPath) {
+		Arrays.stream(filesInPath)
+				.filter(File::isFile)
+				.filter(f -> !f.getName().startsWith("."))
+				.filter(f -> hasASupportedSuffix(f.getName()))
+				.sorted(Comparator.comparingLong(File::lastModified).reversed())
+				.forEach(anImage -> loadImage(swipeListener, anImage));
 	}
 
 	private static boolean hasASupportedSuffix(String fileName) {
