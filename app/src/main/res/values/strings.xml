@@ -1,15 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE resources [
+    <!ENTITY explanation "With Selecator you can select and relocate your images in your directory structure.
+        For example, when you want to move your best family moments to a folder shared (by other apps) with your family.
+        Or when you\'re on a trip and want to share the best pictures with your friends.">
+    ]>
 <resources>
     <string name="app_name">Selecator</string>
-    <string name="action_settings">Settings</string>
+    <string name="action_about">About</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">Select &amp; relocate images</string>
     <string name="check_permission_fragment_label">Enable Permissions</string>
+    <string name="about_fragment_label">About</string>
     <string name="why_permission_text">This app requires full disk access, so that the image files can be moved between the selected folders. Android does not grant file movement without it.</string>
     <string name="open_permisson_label">Please click here to open the Android settings to give permission</string>
     <string name="introduction_explanation_text">
-        With Selecator you can select and relocate your images in your directory structure.
-        For example, when you want to move your best family moments to a folder shared (by other apps) with your family.
-        Or when you\'re on a trip and want to share the best pictures with your friends.
+        &explanation;
         \n\nTo get started:
         \n1. Click on the two paths below to select two directories from where and to where you want to move your images
         \n2. Swipe your images left and right to move them respectively
@@ -19,4 +24,8 @@
     <string name="default_to_path">/to/path</string>
     <string name="from_image_scroller">From Image Scroller</string>
     <string name="to_image_scroller">To Image Scroller</string>
+    <string name="about_text">&explanation;
+        \n\nIt was developed by <a href="https://laurinmurer.ch/">Laurin Murer</a>, because he wanted to use it himself. If you like it, please feel free to donate Ethereum to the wallet 0x63042f6B17C8C28C8FBc5E42017661e65319c22F.
+        \n\nTo report bugs or suggest improvements, check the corresponding <a href="https://github.com/1tchy/Selecator">GitHub repository</a>.
+    </string>
 </resources>
