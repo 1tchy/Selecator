@@ -1,6 +1,5 @@
 package ch.laurinmurer.selecator.helper;
 
-import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,7 +35,6 @@ public class FragmentWithoutActionBar extends Fragment {
 	protected void hideActionBar() {
 		ActionBar actionBar = getSupportActionBar();
 		if (actionBar != null) {
-			Log.d("Debug", "hiding actionbar");
 			actionBar.hide();
 		}
 	}
