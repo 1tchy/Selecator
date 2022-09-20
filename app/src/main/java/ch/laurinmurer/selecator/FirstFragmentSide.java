@@ -99,31 +99,15 @@ public class FirstFragmentSide {
 		}
 	}
 
-	public int getFilesMaxWidth() {
-		int sleepTime = 1;
-		do {
-			int width = imagesViewGroup.getWidth();
-			if (width > 0) {
-				return width;
-			} else {
-				try {
-					Thread.sleep(sleepTime);
-				} catch (InterruptedException e) {
-					return width;
-				}
-				sleepTime *= 2;
-			}
-		} while (sleepTime < 4096);//total 4s
-		return 512;//pixel
-	}
-
 	private void loadImages(File[] filesInPath, View.OnTouchListener swipeListener) {
-		Arrays.stream(filesInPath == null ? new File[0] : filesInPath)
-				.filter(File::isFile)
-				.filter(f -> !f.getName().startsWith("."))
-				.filter(f -> hasASupportedSuffix(f.getName()))
-				.sorted(Comparator.comparingLong(File::lastModified).reversed())
-				.forEach(anImage -> loadImage(swipeListener, anImage));
+		if (filesInPath != null) {
+			Arrays.stream(filesInPath)
+					.filter(File::isFile)
+					.filter(f -> !f.getName().startsWith("."))
+					.filter(f -> hasASupportedSuffix(f.getName()))
+					.sorted(Comparator.comparingLong(File::lastModified).reversed())
+					.forEach(anImage -> loadImage(swipeListener, anImage));
+		}
 	}
 
 	private static boolean hasASupportedSuffix(String fileName) {
@@ -142,7 +126,7 @@ public class FirstFragmentSide {
 			newImage.setImageBitmap(BitmapLoader.fromFile(anImage, getFilesMaxWidth()));
 			newImage.setAdjustViewBounds(true);
 			newImage.setScaleType(ImageView.ScaleType.FIT_XY);
-			newImage.setOnClickListener(v -> showImage(Uri.fromFile(anImage)));
+			newImage.setOnClickListener(v -> showImageFullscreen(Uri.fromFile(anImage)));
 			newImage.setOnTouchListener(swipeListener);
 			imageMetadata.put(newImage, new ImageMetadata(anImage, anImage.lastModified()));
 			onUiThreadRunner.accept(() -> addImageToView(newImage));
@@ -164,7 +148,25 @@ public class FirstFragmentSide {
 		return false;
 	}
 
-	private void showImage(Uri image) {
+	public int getFilesMaxWidth() {
+		int sleepTime = 1;
+		do {
+			int width = imagesViewGroup.getWidth();
+			if (width > 0) {
+				return width;
+			} else {
+				try {
+					Thread.sleep(sleepTime);
+				} catch (InterruptedException e) {
+					return width;
+				}
+				sleepTime *= 2;
+			}
+		} while (sleepTime < 4096);//total 4s
+		return 512;//pixel
+	}
+
+	private void showImageFullscreen(Uri image) {
 		Dialog builder = new Dialog(context, android.R.style.Theme_Light);
 		builder.requestWindowFeature(Window.FEATURE_NO_TITLE);
 		builder.getWindow().setBackgroundDrawable(new ColorDrawable(Color.argb(200, 0, 0, 0)));
