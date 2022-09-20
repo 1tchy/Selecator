@@ -10,11 +10,11 @@ import android.view.ViewGroup;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 import ch.laurinmurer.selecator.databinding.FragmentCheckPermissionBinding;
+import ch.laurinmurer.selecator.helper.FragmentWithoutActionBar;
 
-public class CheckPermissionFragment extends Fragment {
+public class CheckPermissionFragment extends FragmentWithoutActionBar {
 
 	private FragmentCheckPermissionBinding binding;
 	private ActivityResultLauncher<Intent> permissionRequestedResultLauncher;
