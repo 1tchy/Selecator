@@ -31,8 +31,8 @@ public class AboutFragment extends Fragment {
 	}
 
 	@Override
-	public void onStop() {
-		super.onStop();
+	public void onDestroyView() {
+		super.onDestroyView();
 		requireActivity().addMenuProvider(new MenuProvider() {
 			@Override
 			public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
@@ -44,11 +44,6 @@ public class AboutFragment extends Fragment {
 				return false; //report no menu selection handled
 			}
 		});
-	}
-
-	@Override
-	public void onDestroyView() {
-		super.onDestroyView();
 		binding = null;
 	}
 }
