@@ -1,5 +1,6 @@
 package ch.laurinmurer.selecator;
 
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.MediaScannerConnection;
@@ -15,6 +16,7 @@ import androidx.appcompat.widget.AppCompatImageView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 import ch.laurinmurer.selecator.databinding.FragmentFirstBinding;
+import ch.laurinmurer.selecator.helper.ScrollSynchronizer;
 import ch.laurinmurer.selecator.helper.SwipeListener;
 import com.google.android.material.snackbar.Snackbar;
 import com.obsez.android.lib.filechooser.ChooserDialog;
@@ -25,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class FirstFragment extends Fragment {
 
@@ -83,6 +86,18 @@ public class FirstFragment extends Fragment {
 				requireContext(),
 				requireActivity()::runOnUiThread,
 				canFilesNowBeLoaded);
+		AtomicReference<ObjectAnimator> toScrollViewAnimationHolder = new AtomicReference<>();
+		AtomicReference<ObjectAnimator> fromScrollViewAnimationHolder = new AtomicReference<>();
+		AtomicBoolean isToSideBeingScrolledFromOtherSide = new AtomicBoolean();
+		AtomicBoolean isFromSideBeingScrolledFromOtherSide = new AtomicBoolean();
+		new ScrollSynchronizer(
+				binding.fromScrollView, binding.fromScrollViewLayout, fromSide, isFromSideBeingScrolledFromOtherSide,
+				binding.toScrollView, binding.toScrollViewLayout, toSide, toScrollViewAnimationHolder, isToSideBeingScrolledFromOtherSide
+		).register();
+		new ScrollSynchronizer(
+				binding.toScrollView, binding.toScrollViewLayout, toSide, isToSideBeingScrolledFromOtherSide,
+				binding.fromScrollView, binding.fromScrollViewLayout, fromSide, fromScrollViewAnimationHolder, isFromSideBeingScrolledFromOtherSide
+		).register();
 
 		checkPermissionMissing();
 		restorePreferences(requireContext());

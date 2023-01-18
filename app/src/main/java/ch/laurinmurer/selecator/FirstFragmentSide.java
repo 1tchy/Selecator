@@ -19,6 +19,7 @@ import com.github.chrisbanes.photoview.PhotoView;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -66,6 +67,10 @@ public class FirstFragmentSide {
 
 	public File getFileForImage(AppCompatImageView imageView) {
 		return requireNonNull(imageMetadata.get(imageView)).getFile();
+	}
+	public Instant getLastModifiedForImage(AppCompatImageView imageView) {
+		long lastModifiedMillis = getFileForImage(imageView).lastModified();
+		return Instant.ofEpochSecond(lastModifiedMillis / 1000);
 	}
 
 	public Path getPath() {
