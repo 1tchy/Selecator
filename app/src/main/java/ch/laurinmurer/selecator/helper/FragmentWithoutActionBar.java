@@ -9,8 +9,8 @@ public class FragmentWithoutActionBar extends Fragment {
 
 	@Override
 	public void onStart() {
-		super.onStart();
 		hideActionBar();
+		super.onStart();
 	}
 
 	@Override
