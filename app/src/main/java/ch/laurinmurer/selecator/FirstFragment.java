@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.MediaScannerConnection;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,7 +13,6 @@ import android.view.ViewTreeObserver;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.fragment.NavHostFragment;
 import ch.laurinmurer.selecator.databinding.FragmentFirstBinding;
 import ch.laurinmurer.selecator.helper.ScrollSynchronizer;
 import ch.laurinmurer.selecator.helper.SwipeListener;
@@ -99,7 +97,6 @@ public class FirstFragment extends Fragment {
 				binding.fromScrollView, binding.fromScrollViewLayout, fromSide, fromScrollViewAnimationHolder, isFromSideBeingScrolledFromOtherSide
 		).register();
 
-		checkPermissionMissing();
 		restorePreferences(requireContext());
 		return binding.getRoot();
 	}
@@ -157,12 +154,6 @@ public class FirstFragment extends Fragment {
 			editor.putString("toPath", toSide.getPath().toString());
 		}
 		editor.apply();
-	}
-
-	private void checkPermissionMissing() {
-		if (!Environment.isExternalStorageManager()) {
-			NavHostFragment.findNavController(FirstFragment.this).navigate(R.id.action_FirstFragment_to_CheckPermissionFragment);
-		}
 	}
 
 	private void setFromPath(File path, Context context) {

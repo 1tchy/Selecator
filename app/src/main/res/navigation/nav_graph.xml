@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/splashFragment">
+    app:startDestination="@id/FirstFragment">
 
     <fragment
         android:id="@+id/FirstFragment"
@@ -11,37 +11,12 @@
         android:label="@string/first_fragment_label"
         tools:layout="@layout/fragment_first">
         <action
-            android:id="@+id/action_FirstFragment_to_CheckPermissionFragment"
-            app:destination="@id/CheckPermissionFragment" />
-        <action
             android:id="@+id/action_FirstFragment_to_aboutFragment"
             app:destination="@id/AboutFragment" />
-    </fragment>
-    <fragment
-        android:id="@+id/CheckPermissionFragment"
-        android:name="ch.laurinmurer.selecator.CheckPermissionFragment"
-        android:label="@string/check_permission_fragment_label"
-        tools:layout="@layout/fragment_check_permission">
-
-        <action
-            android:id="@+id/action_SecondFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
     </fragment>
     <fragment
         android:id="@+id/AboutFragment"
         android:name="ch.laurinmurer.selecator.AboutFragment"
         android:label="@string/about_fragment_label"
         tools:layout="@layout/fragment_about" />
-    <fragment
-        android:id="@+id/splashFragment"
-        android:name="ch.laurinmurer.selecator.SplashFragment"
-        android:label="fragment_splash"
-        tools:layout="@layout/fragment_splash" >
-        <action
-            android:id="@+id/action_splashFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
-        <action
-            android:id="@+id/action_splashFragment_to_CheckPermissionFragment"
-            app:destination="@id/CheckPermissionFragment" />
-    </fragment>
 </navigation>

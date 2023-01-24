@@ -1,6 +1,8 @@
 package ch.laurinmurer.selecator;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,20 +15,24 @@ import ch.laurinmurer.selecator.databinding.ActivityMainBinding;
 public class MainActivity extends AppCompatActivity {
 
 	private AppBarConfiguration appBarConfiguration;
-	private ActivityMainBinding binding;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		binding = ActivityMainBinding.inflate(getLayoutInflater());
-		setContentView(binding.getRoot());
+		if (!Environment.isExternalStorageManager()) {
+			startActivity(new Intent(this, CheckPermissionActivity.class));
+			finish();
+		} else {
+			ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
+			setContentView(binding.getRoot());
 
-		setSupportActionBar(binding.toolbar);
+			setSupportActionBar(binding.toolbar);
 
-		NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-		appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-		NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+			NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+			appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
+			NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+		}
 	}
 
 	@Override

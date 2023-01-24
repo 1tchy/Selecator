@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="?attr/fullscreenBackgroundColor"
     android:theme="@style/ThemeOverlay.Selecator.FullscreenContainer"
-    tools:context=".CheckPermissionFragment">
+    tools:context=".CheckPermissionActivity">
 
     <TextView
         android:id="@+id/why_permission_label"
