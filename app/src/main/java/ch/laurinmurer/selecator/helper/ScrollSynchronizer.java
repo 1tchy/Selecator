@@ -100,10 +100,12 @@ public class ScrollSynchronizer {
 		}
 	}
 
-	private void centerOtherView(View childToScrollTo) {
-		int childOffset = getDeepChildOffsetOfOtherScrollView(childToScrollTo.getParent(), childToScrollTo);
-		int scrollOffsetForChildOffset = childOffset - ((otherScrollView.getHeight() - childToScrollTo.getHeight()) / 2);
-		scrollOtherViewToOffset(scrollOffsetForChildOffset);
+	public void centerOtherView(View childToScrollTo) {
+		if (childToScrollTo != null) {
+			int childOffset = getDeepChildOffsetOfOtherScrollView(childToScrollTo.getParent(), childToScrollTo);
+			int scrollOffsetForChildOffset = childOffset - ((otherScrollView.getHeight() - childToScrollTo.getHeight()) / 2);
+			scrollOtherViewToOffset(scrollOffsetForChildOffset);
+		}
 	}
 
 	private void scrollOtherViewToOffset(int childOffset) {

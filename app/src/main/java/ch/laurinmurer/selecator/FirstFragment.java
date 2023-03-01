@@ -24,8 +24,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 public class FirstFragment extends Fragment {
 
@@ -52,21 +55,25 @@ public class FirstFragment extends Fragment {
 						.withChosenListener((path, pathFile) -> setToPath(pathFile, requireContext()))
 						.build().show()
 		);
+		List<Consumer<AppCompatImageView>> leftToRightSwipedObserver = new ArrayList<>(1);
 		leftToRightSwipeListener = new SwipeListener(true, binding.fromScrollView, v -> {
 			File anImage = fromSide.getFileForImage((AppCompatImageView) v);
 			Path target = toSide.getPath().resolve(anImage.getName());
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
-				toSide.loadImage(rightToLeftSwipeListener, target.toFile());
+				AppCompatImageView newView = toSide.loadImage(rightToLeftSwipeListener, target.toFile());
+				leftToRightSwipedObserver.forEach(observer -> observer.accept(newView));
 			}
 			return moveSuccessful;
 		});
+		List<Consumer<AppCompatImageView>> rightToLeftSwipedObserver = new ArrayList<>(1);
 		rightToLeftSwipeListener = new SwipeListener(false, binding.toScrollView, v -> {
 			File anImage = toSide.getFileForImage((AppCompatImageView) v);
 			Path target = fromSide.getPath().resolve(anImage.getName());
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
-				fromSide.loadImage(leftToRightSwipeListener, target.toFile());
+				AppCompatImageView newView = fromSide.loadImage(leftToRightSwipeListener, target.toFile());
+				rightToLeftSwipedObserver.forEach(observer -> observer.accept(newView));
 			}
 			return moveSuccessful;
 		});
@@ -88,14 +95,18 @@ public class FirstFragment extends Fragment {
 		AtomicReference<ObjectAnimator> fromScrollViewAnimationHolder = new AtomicReference<>();
 		AtomicBoolean isToSideBeingScrolledFromOtherSide = new AtomicBoolean();
 		AtomicBoolean isFromSideBeingScrolledFromOtherSide = new AtomicBoolean();
-		new ScrollSynchronizer(
+		ScrollSynchronizer leftToRightScrollSynchronizer = new ScrollSynchronizer(
 				binding.fromScrollView, binding.fromScrollViewLayout, fromSide, isFromSideBeingScrolledFromOtherSide,
 				binding.toScrollView, binding.toScrollViewLayout, toSide, toScrollViewAnimationHolder, isToSideBeingScrolledFromOtherSide
-		).register();
-		new ScrollSynchronizer(
+		);
+		leftToRightScrollSynchronizer.register();
+		leftToRightSwipedObserver.add(leftToRightScrollSynchronizer::centerOtherView);
+		ScrollSynchronizer rightToLeftScrollSynchronizer = new ScrollSynchronizer(
 				binding.toScrollView, binding.toScrollViewLayout, toSide, isToSideBeingScrolledFromOtherSide,
 				binding.fromScrollView, binding.fromScrollViewLayout, fromSide, fromScrollViewAnimationHolder, isFromSideBeingScrolledFromOtherSide
-		).register();
+		);
+		rightToLeftScrollSynchronizer.register();
+		rightToLeftSwipedObserver.add(rightToLeftScrollSynchronizer::centerOtherView);
 
 		restorePreferences(requireContext());
 		return binding.getRoot();

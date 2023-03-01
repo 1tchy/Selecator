@@ -68,6 +68,7 @@ public class FirstFragmentSide {
 	public File getFileForImage(AppCompatImageView imageView) {
 		return requireNonNull(imageMetadata.get(imageView)).getFile();
 	}
+
 	public Instant getLastModifiedForImage(AppCompatImageView imageView) {
 		long lastModifiedMillis = getFileForImage(imageView).lastModified();
 		return Instant.ofEpochSecond(lastModifiedMillis / 1000);
@@ -138,8 +139,11 @@ public class FirstFragmentSide {
 	}
 
 	@SuppressLint("ClickableViewAccessibility")
-	public void loadImage(View.OnTouchListener swipeListener, File anImage) {
-		if (!alreadyContainsImage(anImage)) {
+	public AppCompatImageView loadImage(View.OnTouchListener swipeListener, File anImage) {
+		Optional<AppCompatImageView> existingView = getViewIfExists(anImage);
+		if (existingView.isPresent()) {
+			return existingView.get();
+		} else {
 			AppCompatImageView newImage = new AppCompatImageView(context);
 			newImage.setImageBitmap(BitmapLoader.fromFile(anImage, getFilesMaxWidth()));
 			newImage.setAdjustViewBounds(true);
@@ -148,6 +152,7 @@ public class FirstFragmentSide {
 			newImage.setOnTouchListener(swipeListener);
 			imageMetadata.put(newImage, new ImageMetadata(anImage, anImage.lastModified()));
 			onUiThreadRunner.accept(() -> addImageToView(newImage));
+			return newImage;
 		}
 	}
 
@@ -157,13 +162,13 @@ public class FirstFragmentSide {
 		imagesViewGroup.addView(newImage, index);
 	}
 
-	private boolean alreadyContainsImage(File image) {
+	private Optional<AppCompatImageView> getViewIfExists(File image) {
 		for (AppCompatImageView aChild : new ArrayList<>(synchronousImagesViewGroupList)) {
 			if (aChild.getHeight() > 0 && Objects.requireNonNull(imageMetadata.get(aChild)).getFile().getAbsolutePath().equals(image.getAbsolutePath())) {
-				return true;
+				return Optional.of(aChild);
 			}
 		}
-		return false;
+		return Optional.empty();
 	}
 
 	public int getFilesMaxWidth() {
