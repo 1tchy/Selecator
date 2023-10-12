@@ -9,7 +9,7 @@
     <string name="title_activity_check_permission">Enable Permissions</string>
     <string name="about_fragment_label">About</string>
     <string name="why_permission_text">This app requires full disk access, so that the image files can be moved between the selected folders. Android does not grant file movement without it.</string>
-    <string name="open_permisson_label">Please click here to open the Android settings to give permission</string>
+    <string name="open_permission_label">Please click here to open the Android settings to give permission</string>
     <string name="introduction_explanation_text">
         &explanation; \n\nTo get started:
         \n1. Click on the two paths below to select two directories from where and to where you want to move your images

@@ -22,7 +22,7 @@ public class CheckPermissionActivity extends AppCompatActivity {
 		} else {
 			ch.laurinmurer.selecator.databinding.ActivityCheckPermissionBinding binding = ActivityCheckPermissionBinding.inflate(getLayoutInflater());
 			permissionRequestedResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> checkCorrectActivity());
-			binding.openPermissonButton.setOnClickListener(v ->
+			binding.openPermissionButton.setOnClickListener(v ->
 					permissionRequestedResultLauncher.launch(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
 			);
 			setContentView(binding.getRoot());

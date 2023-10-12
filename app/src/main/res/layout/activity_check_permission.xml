@@ -14,16 +14,16 @@
         android:layout_height="wrap_content"
         android:padding="15dp"
         android:text="@string/why_permission_text"
-        app:layout_constraintBottom_toTopOf="@id/open_permisson_button"
+        app:layout_constraintBottom_toTopOf="@id/open_permission_button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/open_permisson_button"
+        android:id="@+id/open_permission_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/open_permisson_label"
+        android:text="@string/open_permission_label"
         app:layout_constraintTop_toBottomOf="@id/why_permission_label"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
