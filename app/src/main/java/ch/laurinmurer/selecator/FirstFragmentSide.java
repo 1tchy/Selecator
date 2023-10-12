@@ -32,9 +32,7 @@ import static java.util.Objects.requireNonNull;
 
 public class FirstFragmentSide {
 
-	private static final Set<String> SUPPORTED_FILE_SUFFIXES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-			"bmp", "gif", "jpg", "jpeg", "png", "webp", "heic", "heif"
-	)));
+	private static final Set<String> SUPPORTED_FILE_SUFFIXES = Set.of("bmp", "gif", "jpg", "jpeg", "png", "webp", "heic", "heif");
 	private final TextView pathLabel;
 	private final ViewGroup imagesViewGroup;
 	private final List<AppCompatImageView> synchronousImagesViewGroupList = Collections.synchronizedList(new ArrayList<>());
