@@ -97,28 +97,7 @@ public class SwipeListener implements View.OnTouchListener {
 							.withEndAction(() -> {
 								if (remove) {
 									if (action.test(v)) {
-										int height = v.getHeight();
-										Animation resize = new Animation() {
-											private boolean finished = false;
-
-											@Override
-											protected void applyTransformation(float interpolatedTime, Transformation t) {
-												if (finished) {
-													return;
-												}
-												v.getLayoutParams().height = height - (int) (height * interpolatedTime);
-												v.requestLayout();
-												if (interpolatedTime >= 1f) {
-													finished = true;
-//																binding.scrollViewLayout.removeView(v);
-													mSwiping = false;
-													mListView.setEnabled(true);
-												}
-											}
-
-										};
-										resize.setDuration(v.getHeight() / MOVE_SPEED);
-										v.startAnimation(resize);
+										v.startAnimation(createResizeAnimation(v));
 									} else {
 										v.setAlpha(1);
 										v.setTranslationX(0);
@@ -144,5 +123,30 @@ public class SwipeListener implements View.OnTouchListener {
 				return false;
 		}
 		return true;
+	}
+
+	private Animation createResizeAnimation(View v) {
+		int height = v.getHeight();
+		Animation resize = new Animation() {
+			private boolean finished = false;
+
+			@Override
+			protected void applyTransformation(float interpolatedTime, Transformation t) {
+				if (finished) {
+					return;
+				}
+				v.getLayoutParams().height = height - (int) (height * interpolatedTime);
+				v.requestLayout();
+				if (interpolatedTime >= 1f) {
+					finished = true;
+//																binding.scrollViewLayout.removeView(v);
+					mSwiping = false;
+					mListView.setEnabled(true);
+				}
+			}
+
+		};
+		resize.setDuration(v.getHeight() / MOVE_SPEED);
+		return resize;
 	}
 }
