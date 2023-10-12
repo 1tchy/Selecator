@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    compileSdk 34
 
     def versionPropsFile = file('version.properties')
     if (versionPropsFile.canRead()) {
@@ -16,7 +16,7 @@ android {
         defaultConfig {
             applicationId "ch.laurinmurer.selecator"
             minSdk 30
-            targetSdk 32
+            targetSdk 34
             versionCode code
             versionName name
 
