@@ -10,8 +10,8 @@ android {
         Properties versionProps = new Properties()
 
         versionProps.load(new FileInputStream(versionPropsFile))
-        def name = versionProps['VERSION_NAME']
-        def code = versionProps['VERSION_CODE'].toInteger()
+        def name = versionProps['VERSION_NAME'].toString()
+        def code = Integer.valueOf(versionProps['VERSION_CODE'].toString())
 
         defaultConfig {
             applicationId "ch.laurinmurer.selecator"
@@ -54,7 +54,7 @@ def increaseVersionCode() {
 
                 versionProps.load(new FileInputStream(versionPropsFile))
 
-                def code = versionProps['VERSION_CODE'].toInteger() + 10
+                def code = Integer.valueOf(versionProps['VERSION_CODE'].toString()) + 10
 
                 versionProps['VERSION_CODE'] = code.toString()
                 versionProps.store(versionPropsFile.newWriter(), null)
