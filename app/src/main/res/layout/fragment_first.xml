@@ -53,7 +53,7 @@
                     android:layout_height="wrap_content"
                     android:divider="@android:drawable/divider_horizontal_dim_dark"
                     android:orientation="vertical"
-                    android:showDividers="middle"></LinearLayout>
+                    android:showDividers="middle" />
             </ScrollView>
         </LinearLayout>
 
