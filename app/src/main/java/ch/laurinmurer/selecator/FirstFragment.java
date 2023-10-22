@@ -1,6 +1,5 @@
 package ch.laurinmurer.selecator;
 
-import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.MediaScannerConnection;
@@ -11,8 +10,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import androidx.annotation.NonNull;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import ch.laurinmurer.selecator.databinding.FragmentFirstBinding;
 import ch.laurinmurer.selecator.helper.ScrollSynchronizer;
 import ch.laurinmurer.selecator.helper.SwipeListener;
@@ -24,8 +25,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -55,61 +59,82 @@ public class FirstFragment extends Fragment {
 						.withChosenListener((path, pathFile) -> setToPath(pathFile, requireContext()))
 						.build().show()
 		);
-		List<Consumer<AppCompatImageView>> leftToRightSwipedObserver = new ArrayList<>(1);
-		leftToRightSwipeListener = new SwipeListener(true, binding.fromScrollView, v -> {
-			File anImage = fromSide.getFileForImage((AppCompatImageView) v);
-			Path target = toSide.getPath().resolve(anImage.getName());
+		List<Consumer<SelecatorRecyclerViewAdapter.Data>> leftToRightSwipedObserver = new ArrayList<>(1);
+		leftToRightSwipeListener = new SwipeListener(true, binding.fromRecyclerView, v -> {
+			SelecatorRecyclerViewAdapter.Data imageData = fromSide.getImageDataForView((AppCompatImageView) v);
+			String fileName = imageData.imageFileName();
+			Path anImage = fromSide.getPath().resolve(fileName);
+			Path target = toSide.getPath().resolve(fileName);
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
-				AppCompatImageView newView = toSide.loadImage(rightToLeftSwipeListener, target.toFile());
-				leftToRightSwipedObserver.forEach(observer -> observer.accept(newView));
+				fromSide.removeImage(imageData);
+				SelecatorRecyclerViewAdapter.Data movedFile = toSide.loadImage(rightToLeftSwipeListener, target.toFile());
+				leftToRightSwipedObserver.forEach(observer -> observer.accept(movedFile));
 			}
-			return moveSuccessful;
 		});
-		List<Consumer<AppCompatImageView>> rightToLeftSwipedObserver = new ArrayList<>(1);
-		rightToLeftSwipeListener = new SwipeListener(false, binding.toScrollView, v -> {
-			File anImage = toSide.getFileForImage((AppCompatImageView) v);
-			Path target = fromSide.getPath().resolve(anImage.getName());
+		List<Consumer<SelecatorRecyclerViewAdapter.Data>> rightToLeftSwipedObserver = new ArrayList<>(1);
+		rightToLeftSwipeListener = new SwipeListener(false, binding.toRecyclerView, v -> {
+			SelecatorRecyclerViewAdapter.Data imageData = toSide.getImageDataForView((AppCompatImageView) v);
+			String fileName = imageData.imageFileName();
+			Path anImage = toSide.getPath().resolve(fileName);
+			Path target = fromSide.getPath().resolve(fileName);
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
-				AppCompatImageView newView = fromSide.loadImage(leftToRightSwipeListener, target.toFile());
-				rightToLeftSwipedObserver.forEach(observer -> observer.accept(newView));
+				toSide.removeImage(imageData);
+				SelecatorRecyclerViewAdapter.Data movedFile = fromSide.loadImage(leftToRightSwipeListener, target.toFile());
+				rightToLeftSwipedObserver.forEach(observer -> observer.accept(movedFile));
 			}
-			return moveSuccessful;
 		});
-		fromSide = new FirstFragmentSide(binding.fromPath,
-				binding.fromScrollViewLayout,
+
+		AtomicReference<Path> fromPath = new AtomicReference<>();
+		SelecatorRecyclerViewAdapter fromSideRecyclerViewAdapter = new SelecatorRecyclerViewAdapter(requireContext(), binding.fromRecyclerView, requireActivity()::runOnUiThread, fromPath);
+		fromSide = new FirstFragmentSide("from",
+				binding.fromPath,
 				leftToRightSwipeListener,
 				this::checkIntroductionStillNeeded,
-				requireContext(),
-				requireActivity()::runOnUiThread,
-				canFilesNowBeLoaded);
-		toSide = new FirstFragmentSide(binding.toPath,
-				binding.toScrollViewLayout,
+				canFilesNowBeLoaded,
+				fromPath,
+				fromSideRecyclerViewAdapter);
+		binding.fromRecyclerView.setAdapter(fromSideRecyclerViewAdapter);
+		binding.fromRecyclerView.addItemDecoration(createDividerItemDecoration(requireContext()));
+
+		AtomicReference<Path> toPath = new AtomicReference<>();
+		SelecatorRecyclerViewAdapter toSideRecyclerViewAdapter = new SelecatorRecyclerViewAdapter(requireContext(), binding.toRecyclerView, requireActivity()::runOnUiThread, toPath);
+		toSide = new FirstFragmentSide("to",
+				binding.toPath,
 				rightToLeftSwipeListener,
 				this::checkIntroductionStillNeeded,
-				requireContext(),
-				requireActivity()::runOnUiThread,
-				canFilesNowBeLoaded);
-		AtomicReference<ObjectAnimator> toScrollViewAnimationHolder = new AtomicReference<>();
-		AtomicReference<ObjectAnimator> fromScrollViewAnimationHolder = new AtomicReference<>();
-		AtomicBoolean isToSideBeingScrolledFromOtherSide = new AtomicBoolean();
-		AtomicBoolean isFromSideBeingScrolledFromOtherSide = new AtomicBoolean();
+				canFilesNowBeLoaded,
+				toPath,
+				toSideRecyclerViewAdapter);
+		binding.toRecyclerView.setAdapter(toSideRecyclerViewAdapter);
+		binding.toRecyclerView.addItemDecoration(createDividerItemDecoration(requireContext()));
+
+		AtomicReference<ScrollSynchronizer.SelecatorSmoothScroller> toScrollViewAnimationHolder = new AtomicReference<>();
+		AtomicReference<ScrollSynchronizer.SelecatorSmoothScroller> fromScrollViewAnimationHolder = new AtomicReference<>();
+		List<AtomicReference<Instant>> finishTimesOfToSideBeingScrolledFromOtherSide = Collections.synchronizedList(new ArrayList<>());
+		List<AtomicReference<Instant>> finishTimesOfFromSideBeingScrolledFromOtherSide = Collections.synchronizedList(new ArrayList<>());
 		ScrollSynchronizer leftToRightScrollSynchronizer = new ScrollSynchronizer(
-				binding.fromScrollView, binding.fromScrollViewLayout, fromSide, isFromSideBeingScrolledFromOtherSide,
-				binding.toScrollView, binding.toScrollViewLayout, toSide, toScrollViewAnimationHolder, isToSideBeingScrolledFromOtherSide
+				"left", binding.fromRecyclerView, fromSide,
+				finishTimesOfFromSideBeingScrolledFromOtherSide, binding.toRecyclerView, toSideRecyclerViewAdapter, toSide, toScrollViewAnimationHolder, finishTimesOfToSideBeingScrolledFromOtherSide
 		);
 		leftToRightScrollSynchronizer.register();
 		leftToRightSwipedObserver.add(leftToRightScrollSynchronizer::centerOtherView);
-		ScrollSynchronizer rightToLeftScrollSynchronizer = new ScrollSynchronizer(
-				binding.toScrollView, binding.toScrollViewLayout, toSide, isToSideBeingScrolledFromOtherSide,
-				binding.fromScrollView, binding.fromScrollViewLayout, fromSide, fromScrollViewAnimationHolder, isFromSideBeingScrolledFromOtherSide
+		ScrollSynchronizer rightToLeftScrollSynchronizer = new ScrollSynchronizer("right",
+				binding.toRecyclerView, toSide,
+				finishTimesOfToSideBeingScrolledFromOtherSide, binding.fromRecyclerView, fromSideRecyclerViewAdapter, fromSide, fromScrollViewAnimationHolder, finishTimesOfFromSideBeingScrolledFromOtherSide
 		);
 		rightToLeftScrollSynchronizer.register();
 		rightToLeftSwipedObserver.add(rightToLeftScrollSynchronizer::centerOtherView);
 
 		restorePreferences(requireContext());
 		return binding.getRoot();
+	}
+
+	private static DividerItemDecoration createDividerItemDecoration(Context context) {
+		DividerItemDecoration divider = new DividerItemDecoration(context, DividerItemDecoration.VERTICAL);
+		divider.setDrawable(Objects.requireNonNull(AppCompatResources.getDrawable(context, android.R.drawable.divider_horizontal_dim_dark)));
+		return divider;
 	}
 
 	@Override
@@ -191,20 +216,20 @@ public class FirstFragment extends Fragment {
 	}
 
 	@SuppressWarnings("unused")
-	private static boolean move(View view, File anImage, Path target) {
+	private static boolean move(View view, Path anImage, Path target) {
 		try {
-			Files.move(anImage.toPath(), target);
-			MediaScannerConnection.scanFile(view.getContext(), new String[]{anImage.getAbsolutePath()}, null /*mimeTypes*/, (s, uri) -> {
+			Files.move(anImage, target);
+			MediaScannerConnection.scanFile(view.getContext(), new String[]{anImage.toAbsolutePath().toString()}, null /*mimeTypes*/, (s, uri) -> {
 			});
-			MediaScannerConnection.scanFile(view.getContext(), new String[]{target.toFile().getAbsolutePath()}, null /*mimeTypes*/, (s, uri) -> {
+			MediaScannerConnection.scanFile(view.getContext(), new String[]{target.toAbsolutePath().toString()}, null /*mimeTypes*/, (s, uri) -> {
 			});
 		} catch (IOException e) {
-			Snackbar.make(view, "Failed to move " + anImage.getName() + " to " + target + ": " + e.getLocalizedMessage(), Snackbar.LENGTH_LONG)
+			Snackbar.make(view, "Failed to move " + anImage.getFileName() + " to " + target + ": " + e.getLocalizedMessage(), Snackbar.LENGTH_LONG)
 					.setAction("Action", null).show();
-			Log.e("Error", "Failed to move " + anImage.getName() + " to " + target, e);
+			Log.e("Error", "Failed to move " + anImage.getFileName() + " to " + target, e);
 			return false;
 		}
-		Log.i("Success", "Moved " + anImage.getName() + " to " + target);
+		Log.i("Success", "Moved " + anImage.getFileName() + " to " + target);
 		return true;
 	}
 

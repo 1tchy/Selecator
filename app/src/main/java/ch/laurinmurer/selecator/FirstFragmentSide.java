@@ -1,58 +1,45 @@
 package ch.laurinmurer.selecator;
 
-import android.annotation.SuppressLint;
-import android.app.Dialog;
-import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
-import android.net.Uri;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import androidx.appcompat.widget.AppCompatImageView;
-import ch.laurinmurer.selecator.helper.BitmapLoader;
-import com.github.chrisbanes.photoview.PhotoView;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-
-import static java.util.Objects.requireNonNull;
 
 public class FirstFragmentSide {
 
+	/**
+	 * @noinspection unused, FieldCanBeLocal - useful for debugging
+	 */
+	private final String side;
 	private static final Set<String> SUPPORTED_FILE_SUFFIXES = Set.of("bmp", "gif", "jpg", "jpeg", "png", "webp", "heic", "heif");
 	private final TextView pathLabel;
-	private final ViewGroup imagesViewGroup;
-	private final List<AppCompatImageView> synchronousImagesViewGroupList = Collections.synchronizedList(new ArrayList<>());
-	private final Map<AppCompatImageView, ImageMetadata> imageMetadata = new ConcurrentHashMap<>();
 	private final View.OnTouchListener swipeListener;
 	private final Runnable afterPathSet;
-	private final Context context;
-	private final Consumer<Runnable> onUiThreadRunner;
 	private final AtomicBoolean canFilesNowBeLoaded;
 	private final ExecutorService imageLoaderExecutor = Executors.newSingleThreadExecutor();
-	private Path path;
+	private final SelecatorRecyclerViewAdapter recyclerViewAdapter;
+	private final AtomicReference<Path> path;
 
-	public FirstFragmentSide(TextView pathLabel, ViewGroup imagesViewGroup, View.OnTouchListener swipeListener, Runnable afterPathSet, Context context, Consumer<Runnable> onUiThreadRunner, AtomicBoolean canFilesNowBeLoaded) {
+	public FirstFragmentSide(String side, TextView pathLabel, View.OnTouchListener swipeListener, Runnable afterPathSet, AtomicBoolean canFilesNowBeLoaded, AtomicReference<Path> pathReferenceHolder, SelecatorRecyclerViewAdapter recyclerViewAdapter) {
+		this.side = side;
 		this.pathLabel = pathLabel;
-		this.imagesViewGroup = imagesViewGroup;
 		this.swipeListener = swipeListener;
 		this.afterPathSet = afterPathSet;
-		this.context = context;
-		this.onUiThreadRunner = onUiThreadRunner;
 		this.canFilesNowBeLoaded = canFilesNowBeLoaded;
+		this.path = pathReferenceHolder;
+		this.recyclerViewAdapter = recyclerViewAdapter;
 	}
 
 	public boolean hasValidDirectorySelected() {
@@ -63,23 +50,22 @@ public class FirstFragmentSide {
 		imageLoaderExecutor.shutdown();
 	}
 
-	public File getFileForImage(AppCompatImageView imageView) {
-		return requireNonNull(imageMetadata.get(imageView)).getFile();
+	public SelecatorRecyclerViewAdapter.Data getImageDataForView(AppCompatImageView imageView) {
+		return recyclerViewAdapter.getCurrentBinding(imageView);
 	}
 
 	public Instant getLastModifiedForImage(AppCompatImageView imageView) {
-		long lastModifiedMillis = getFileForImage(imageView).lastModified();
-		return Instant.ofEpochSecond(lastModifiedMillis / 1000);
+		return Instant.ofEpochMilli(getImageDataForView(imageView).lastModified());
 	}
 
 	public Path getPath() {
-		return path;
+		return path.get();
 	}
 
 	public void setPathVariables(File newPath) {
-		if (!newPath.toPath().equals(path)) {
+		if (!newPath.toPath().equals(path.get())) {
 			pathLabel.setText(newPath.getName());
-			path = newPath.toPath();
+			path.set(newPath.toPath());
 			afterPathSet.run();
 			if (canFilesNowBeLoaded.get()) {
 				loadFilesInNewThread();
@@ -88,17 +74,23 @@ public class FirstFragmentSide {
 	}
 
 	public void loadFilesInNewThread() {
+		Path path = this.path.get();
 		if (path != null && path.toFile().isDirectory()) {
-			imageLoaderExecutor.submit(() -> logExceptions(() -> {
-				File[] filesInPath = listImagesOnDisk();
-				removeImagesNoMoreOnDisk(filesInPath);
-				loadImages(filesInPath);
-			}));
+			imageLoaderExecutor.submit(() -> {
+				try {
+					File[] filesInPath = listImagesOnDisk();
+					removeImagesNoMoreOnDisk(filesInPath);
+					loadImages(filesInPath);
+				} catch (RuntimeException e) {
+					Log.e("Exception", e.getLocalizedMessage(), e);
+					throw e;
+				}
+			});
 		}
 	}
 
 	private File[] listImagesOnDisk() {
-		File[] filesInPath = path.toFile().listFiles();
+		File[] filesInPath = path.get().toFile().listFiles();
 		if (filesInPath == null) {
 			filesInPath = new File[0];
 		}
@@ -107,13 +99,12 @@ public class FirstFragmentSide {
 
 	private void removeImagesNoMoreOnDisk(File[] filesInPath) {
 		Set<String> filesOnDisk = Arrays.stream(filesInPath)
-				.map(File::getAbsolutePath)
+				.map(File::getName)
 				.collect(Collectors.toSet());
-		for (int index = synchronousImagesViewGroupList.size() - 1; index >= 0; index--) {
-			AppCompatImageView imageView = synchronousImagesViewGroupList.get(index);
-			if (!filesOnDisk.contains(requireNonNull(imageMetadata.get(imageView)).getFile().getAbsolutePath())) {
-				synchronousImagesViewGroupList.remove(index);
-				onUiThreadRunner.accept(() -> imagesViewGroup.removeView(imageView));
+		for (int index = recyclerViewAdapter.getItemCount() - 1; index >= 0; index--) {
+			SelecatorRecyclerViewAdapter.Data data = recyclerViewAdapter.getData(index);
+			if (!filesOnDisk.contains(data.imageFileName())) {
+				recyclerViewAdapter.removeData(data);
 			}
 		}
 	}
@@ -136,109 +127,13 @@ public class FirstFragmentSide {
 		return false;
 	}
 
-	@SuppressLint("ClickableViewAccessibility")
-	public AppCompatImageView loadImage(View.OnTouchListener swipeListener, File anImage) {
-		Optional<AppCompatImageView> existingView = getViewIfExists(anImage);
-		if (existingView.isPresent()) {
-			return existingView.get();
-		} else {
-			AppCompatImageView newImage = new AppCompatImageView(context);
-			newImage.setImageBitmap(BitmapLoader.fromFile(anImage, getFilesMaxWidth()));
-			newImage.setAdjustViewBounds(true);
-			newImage.setScaleType(ImageView.ScaleType.FIT_XY);
-			newImage.setOnClickListener(v -> showImageFullscreen(Uri.fromFile(anImage)));
-			newImage.setOnTouchListener(swipeListener);
-			imageMetadata.put(newImage, new ImageMetadata(anImage, anImage.lastModified()));
-			onUiThreadRunner.accept(() -> addImageToView(newImage));
-			return newImage;
-		}
+	public SelecatorRecyclerViewAdapter.Data loadImage(View.OnTouchListener swipeListener, File anImage) {
+		SelecatorRecyclerViewAdapter.Data data = new SelecatorRecyclerViewAdapter.Data(anImage, swipeListener);
+		recyclerViewAdapter.addData(data);
+		return data;
 	}
 
-	private void addImageToView(AppCompatImageView newImage) {
-		int index = calculateNewIndex(newImage);
-		synchronousImagesViewGroupList.add(index, newImage);
-		imagesViewGroup.addView(newImage, index);
-	}
-
-	private Optional<AppCompatImageView> getViewIfExists(File image) {
-		for (AppCompatImageView aChild : new ArrayList<>(synchronousImagesViewGroupList)) {
-			if (aChild.getHeight() > 0 && Objects.requireNonNull(imageMetadata.get(aChild)).getFile().getAbsolutePath().equals(image.getAbsolutePath())) {
-				return Optional.of(aChild);
-			}
-		}
-		return Optional.empty();
-	}
-
-	public int getFilesMaxWidth() {
-		int sleepTime = 1;
-		do {
-			int width = imagesViewGroup.getWidth();
-			if (width > 0) {
-				return width;
-			} else {
-				try {
-					Thread.sleep(sleepTime);
-				} catch (InterruptedException e) {
-					return width;
-				}
-				sleepTime *= 2;
-			}
-		} while (sleepTime < 4096);//total 4s
-		return 512;//pixel
-	}
-
-	private void showImageFullscreen(Uri image) {
-		Dialog builder = new Dialog(context, android.R.style.Theme_Light);
-		builder.requestWindowFeature(Window.FEATURE_NO_TITLE);
-		builder.getWindow().setBackgroundDrawable(new ColorDrawable(Color.argb(200, 0, 0, 0)));
-		builder.setOnDismissListener(dialogInterface -> {
-		});
-
-		PhotoView imageView = new PhotoView(context);
-		imageView.setImageURI(image);
-		imageView.setOnClickListener(v -> builder.dismiss());
-		builder.addContentView(imageView, new RelativeLayout.LayoutParams(
-				ViewGroup.LayoutParams.MATCH_PARENT,
-				ViewGroup.LayoutParams.MATCH_PARENT));
-		builder.show();
-	}
-
-	private int calculateNewIndex(AppCompatImageView newImage) {
-		long lastModifiedOfNewImage = Objects.requireNonNull(imageMetadata.get(newImage)).getLastModified();
-		for (int index = 0; index < synchronousImagesViewGroupList.size(); index++) {
-			AppCompatImageView childAt = synchronousImagesViewGroupList.get(index);
-			long lastModifiedOfChildAt = Objects.requireNonNull(imageMetadata.get(childAt)).getLastModified();
-			if (lastModifiedOfChildAt < lastModifiedOfNewImage) {
-				return index;
-			}
-		}
-		return synchronousImagesViewGroupList.size();
-	}
-
-	private static void logExceptions(Runnable runnable) {
-		try {
-			runnable.run();
-		} catch (RuntimeException e) {
-			Log.e("Exception", e.getLocalizedMessage(), e);
-			throw e;
-		}
-	}
-
-	private static class ImageMetadata {
-		private final File file;
-		private final long lastModified;
-
-		private ImageMetadata(File file, long lastModified) {
-			this.file = file;
-			this.lastModified = lastModified;
-		}
-
-		public File getFile() {
-			return file;
-		}
-
-		public long getLastModified() {
-			return lastModified;
-		}
+	public void removeImage(SelecatorRecyclerViewAdapter.Data anImage) {
+		recyclerViewAdapter.removeData(anImage);
 	}
 }

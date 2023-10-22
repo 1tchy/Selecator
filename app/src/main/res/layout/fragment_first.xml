@@ -41,20 +41,17 @@
                 android:padding="7dp"
                 android:text="@string/default_from_path" />
 
-            <ScrollView
-                android:id="@+id/fromScrollView"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/fromRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:contentDescription="@string/from_image_scroller">
-
-                <LinearLayout
-                    android:id="@+id/fromScrollViewLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:divider="@android:drawable/divider_horizontal_dim_dark"
-                    android:orientation="vertical"
-                    android:showDividers="middle" />
-            </ScrollView>
+                android:contentDescription="@string/from_image_scroller"
+                app:fastScrollEnabled="true"
+                app:fastScrollHorizontalThumbDrawable="@drawable/thumb_drawable"
+                app:fastScrollHorizontalTrackDrawable="@drawable/line_drawable"
+                app:fastScrollVerticalThumbDrawable="@drawable/thumb_drawable"
+                app:fastScrollVerticalTrackDrawable="@drawable/line_drawable"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
         </LinearLayout>
 
         <LinearLayout
@@ -70,20 +67,17 @@
                 android:padding="7dp"
                 android:text="@string/default_to_path" />
 
-            <ScrollView
-                android:id="@+id/toScrollView"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/toRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:contentDescription="@string/to_image_scroller">
-
-                <LinearLayout
-                    android:id="@+id/toScrollViewLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:divider="@android:drawable/divider_horizontal_dim_dark"
-                    android:orientation="vertical"
-                    android:showDividers="middle" />
-            </ScrollView>
+                android:contentDescription="@string/to_image_scroller"
+                app:fastScrollEnabled="true"
+                app:fastScrollHorizontalThumbDrawable="@drawable/thumb_drawable"
+                app:fastScrollHorizontalTrackDrawable="@drawable/line_drawable"
+                app:fastScrollVerticalThumbDrawable="@drawable/thumb_drawable"
+                app:fastScrollVerticalTrackDrawable="@drawable/line_drawable"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
         </LinearLayout>
     </LinearLayout>
 

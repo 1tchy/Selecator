@@ -1,153 +1,137 @@
 package ch.laurinmurer.selecator.helper;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewParent;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import androidx.appcompat.widget.AppCompatImageView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.LinearSmoothScroller;
+import androidx.recyclerview.widget.RecyclerView;
 import ch.laurinmurer.selecator.FirstFragmentSide;
+import ch.laurinmurer.selecator.SelecatorRecyclerViewAdapter;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class ScrollSynchronizer {
-	private final ScrollView scrollView;
-	private final LinearLayout scrollViewLayout;
-	private final FirstFragmentSide side;
-	private final AtomicBoolean isSideBeingScrolledFromOtherSide;
-	private final ScrollView otherScrollView;
-	private final android.widget.LinearLayout otherScrollViewLayout;
-	private final FirstFragmentSide otherSide;
-	private final AtomicReference<ObjectAnimator> otherSideAnimationHolder;
-	private final AtomicBoolean isOtherSideBeingScrolledFromThisSide;
+import static java.util.Objects.requireNonNull;
 
-	public ScrollSynchronizer(ScrollView scrollView, LinearLayout scrollViewLayout, FirstFragmentSide side, AtomicBoolean isSideBeingScrolledFromOtherSide, ScrollView otherScrollView, LinearLayout otherScrollViewLayout, FirstFragmentSide otherSide, AtomicReference<ObjectAnimator> otherSideAnimationHolder, AtomicBoolean isOtherSideBeingScrolledFromThisSide) {
-		this.scrollView = scrollView;
-		this.scrollViewLayout = scrollViewLayout;
+public class ScrollSynchronizer {
+	private static final int SECONDS_TO_SYNC_SCROLL = 15;
+	private final String sideName;
+	private final RecyclerView recyclerView;
+	private final FirstFragmentSide side;
+	private final List<AtomicReference<Instant>> finishTimesOfSideBeingScrolledFromOtherSide;
+	private final RecyclerView otherRecyclerView;
+	private final SelecatorRecyclerViewAdapter otherRecyclerViewAdapter;
+	private final FirstFragmentSide otherSide;
+	private final AtomicReference<SelecatorSmoothScroller> otherSideAnimationHolder;
+	private final List<AtomicReference<Instant>> finishTimesOfOtherSideScrollsFromThisSide;
+
+	public ScrollSynchronizer(String sideName, RecyclerView recyclerView, FirstFragmentSide side, List<AtomicReference<Instant>> finishTimesOfSideBeingScrolledFromOtherSide, RecyclerView otherRecyclerView, SelecatorRecyclerViewAdapter otherRecyclerViewAdapter, FirstFragmentSide otherSide, AtomicReference<SelecatorSmoothScroller> otherSideAnimationHolder, List<AtomicReference<Instant>> finishTimesOfOtherSideScrollsFromThisSide) {
+		this.sideName = sideName;
+		this.recyclerView = recyclerView;
 		this.side = side;
-		this.isSideBeingScrolledFromOtherSide = isSideBeingScrolledFromOtherSide;
-		this.otherScrollView = otherScrollView;
-		this.otherScrollViewLayout = otherScrollViewLayout;
+		this.finishTimesOfSideBeingScrolledFromOtherSide = finishTimesOfSideBeingScrolledFromOtherSide;
+		this.otherRecyclerView = otherRecyclerView;
+		this.otherRecyclerViewAdapter = otherRecyclerViewAdapter;
 		this.otherSide = otherSide;
-		this.isOtherSideBeingScrolledFromThisSide = isOtherSideBeingScrolledFromThisSide;
 		this.otherSideAnimationHolder = otherSideAnimationHolder;
+		this.finishTimesOfOtherSideScrollsFromThisSide = finishTimesOfOtherSideScrollsFromThisSide;
 	}
 
 	@SuppressLint("ClickableViewAccessibility") //Sorry! Because this is an image app, I hope I don't offend anyone
 	public void register() {
-		scrollView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-			if (!isSideBeingScrolledFromOtherSide.get()) {
+		recyclerView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+			boolean sideBeingScrolledFromOtherSide = isSideBeingScrolledFromOtherSide();
+			if (!sideBeingScrolledFromOtherSide) {
 				transmitScroll();
 			}
 		});
-		otherScrollView.setOnTouchListener((v, event) -> {
-			Optional.ofNullable(otherSideAnimationHolder.get()).ifPresent(ValueAnimator::cancel);
+		otherRecyclerView.setOnTouchListener((v, event) -> {
+			Optional.ofNullable(otherSideAnimationHolder.get()).ifPresent(SelecatorSmoothScroller::doStop);
 			return false;
 		});
+	}
 
+	private boolean isSideBeingScrolledFromOtherSide() {
+		Instant referenceTime = Instant.now().minusSeconds(SECONDS_TO_SYNC_SCROLL).minusMillis(200);
+		while (!finishTimesOfSideBeingScrolledFromOtherSide.isEmpty()) {
+			AtomicReference<Instant> aFinishTimeReference = finishTimesOfSideBeingScrolledFromOtherSide.get(0);
+			Instant aFinishTime = aFinishTimeReference == null ? null : aFinishTimeReference.get();
+			if (aFinishTime != null && aFinishTime.isBefore(referenceTime)) {
+				finishTimesOfSideBeingScrolledFromOtherSide.remove(aFinishTimeReference);
+			} else {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void transmitScroll() {
-		Optional<TopBottom<View>> sichtbareBilder = getTopAndBottomInFocusArea(scrollView, scrollViewLayout, 0.35f);
+		Optional<TopBottom<View>> sichtbareBilder = getTopAndBottomInFocusArea(recyclerView, 0.35f);
 		if (sichtbareBilder.isPresent()) {
 			TopBottom<Instant> sichtbarerZeitbereich = sichtbareBilder.get()
 					.map(bild -> side.getLastModifiedForImage((AppCompatImageView) bild));
-			Optional<TopBottom<View>> sichtbareBilderAndereSeite = getTopAndBottomInFocusArea(otherScrollView, otherScrollViewLayout, 0.4f);
+			Optional<TopBottom<View>> sichtbareBilderAndereSeite = getTopAndBottomInFocusArea(otherRecyclerView, 0.4f);
 			if (sichtbareBilderAndereSeite.isPresent()) {
 				TopBottom<Instant> sichtbarerZeitbereichAndereSeite = sichtbareBilderAndereSeite.get()
 						.map(bild -> otherSide.getLastModifiedForImage((AppCompatImageView) bild));
 				boolean shouldShowImageFurtherUp = sichtbarerZeitbereichAndereSeite.top().isBefore(sichtbarerZeitbereich.bottom());
 				boolean shouldShowImageFurtherDown = sichtbarerZeitbereich.top().isBefore(sichtbarerZeitbereichAndereSeite.bottom());
 				if (shouldShowImageFurtherDown) {
-					if (scrollView.getScrollY() < scrollView.getHeight() * 0.8) {
-						return;//do not scroll down other side if this side is still on the first page
+					if (((LinearLayoutManager) requireNonNull(recyclerView.getLayoutManager())).findFirstVisibleItemPosition() == 0) {
+						return;//do not scroll down other side if this side is still showing the first element
 					}
 					Instant maxTimeToShow = sichtbarerZeitbereich.top();
 					int indexToScrollTo = 0;
-					for (; indexToScrollTo < otherScrollViewLayout.getChildCount(); indexToScrollTo++) {
-						Instant lastModifiedAtIndex = otherSide.getLastModifiedForImage((AppCompatImageView) otherScrollViewLayout.getChildAt(indexToScrollTo));
+					for (; indexToScrollTo < otherRecyclerViewAdapter.getItemCount(); indexToScrollTo++) {
+						Instant lastModifiedAtIndex = otherRecyclerViewAdapter.getData(indexToScrollTo).lastModifiedInstant();
 						if (lastModifiedAtIndex.isBefore(maxTimeToShow)) {
 							indexToScrollTo--;
-							Log.i("DEB", "Will scroll further down to image above the one at " + lastModifiedAtIndex + " because topmost is from " + maxTimeToShow);
+							Log.i("DEB", "Will scroll other side of '" + sideName + "' further down to image above the one at " + lastModifiedAtIndex + " because topmost is from " + maxTimeToShow);
 							break;
 						}
 					}
-					View scrollTarget = otherScrollViewLayout.getChildAt(indexToScrollTo);
-					centerOtherView(scrollTarget);
+					centerOtherView(indexToScrollTo);
 				} else if (shouldShowImageFurtherUp) {
 					Instant minTimeToShow = sichtbarerZeitbereich.bottom();
 					int indexToScrollTo = 0;
-					for (; indexToScrollTo < otherScrollViewLayout.getChildCount(); indexToScrollTo++) {
-						Instant lastModifiedAtIndex = otherSide.getLastModifiedForImage((AppCompatImageView) otherScrollViewLayout.getChildAt(indexToScrollTo));
+					for (; indexToScrollTo < otherRecyclerViewAdapter.getItemCount(); indexToScrollTo++) {
+						Instant lastModifiedAtIndex = otherRecyclerViewAdapter.getData(indexToScrollTo).lastModifiedInstant();
 						if (!lastModifiedAtIndex.isAfter(minTimeToShow)) {
 							Log.i("DEB", "Will scroll further up to image of " + lastModifiedAtIndex);
 							break;
 						}
 					}
-					View scrollTarget = otherScrollViewLayout.getChildAt(indexToScrollTo);
-					centerOtherView(scrollTarget);
+					centerOtherView(indexToScrollTo);
 				}
 			}
 		}
 	}
 
-	public void centerOtherView(View childToScrollTo) {
+	public void centerOtherView(int childToScrollTo) {
+		LinearSmoothScroller smoothScroller = new SelecatorSmoothScroller(ScrollSynchronizer.this.recyclerView.getContext(), sideName, finishTimesOfOtherSideScrollsFromThisSide);
+		smoothScroller.setTargetPosition(childToScrollTo);
+		requireNonNull(otherRecyclerView.getLayoutManager()).startSmoothScroll(smoothScroller);
+	}
+
+	public void centerOtherView(SelecatorRecyclerViewAdapter.Data childToScrollTo) {
 		if (childToScrollTo != null) {
-			int childOffset = getDeepChildOffsetOfOtherScrollView(childToScrollTo.getParent(), childToScrollTo);
-			int scrollOffsetForChildOffset = childOffset - ((otherScrollView.getHeight() - childToScrollTo.getHeight()) / 2);
-			scrollOtherViewToOffset(scrollOffsetForChildOffset);
+			otherRecyclerViewAdapter.scrollTo(childToScrollTo);
 		}
 	}
 
-	private void scrollOtherViewToOffset(int childOffset) {
-		ObjectAnimator objectAnimator = ObjectAnimator.ofInt(otherScrollView, "scrollY", childOffset);
-		objectAnimator.setDuration(8000);
-		objectAnimator.addListener(new AnimatorListenerAdapter() {
-			@Override
-			public void onAnimationEnd(Animator animation) {
-				isOtherSideBeingScrolledFromThisSide.set(false);
-			}
-
-			@Override
-			public void onAnimationCancel(Animator animation) {
-				isOtherSideBeingScrolledFromThisSide.set(false);
-			}
-		});
-		ObjectAnimator previousAnimation = otherSideAnimationHolder.getAndSet(objectAnimator);
-		Optional.ofNullable(previousAnimation).ifPresent(ValueAnimator::cancel);
-		isOtherSideBeingScrolledFromThisSide.set(true);
-		objectAnimator.start();
-	}
-
-	/**
-	 * We need to scroll to a child in the other ScrollView, but the child may not be a direct child to the other ScrollView.
-	 * To get the correct child position to scroll to, we need to iterate through all of its parent views till the main parent (otherScrollView).
-	 */
-	private int getDeepChildOffsetOfOtherScrollView(ViewParent parent, View child) {
-		ViewGroup parentGroup = (ViewGroup) parent;
-		int offset = child.getTop();
-		if (parentGroup.equals(otherScrollView)) {
-			return offset;
-		}
-		return offset + getDeepChildOffsetOfOtherScrollView(parentGroup.getParent(), parentGroup);
-	}
-
-	private static Optional<TopBottom<View>> getTopAndBottomInFocusArea(ScrollView fromScrollView, LinearLayout linearLayout, float noneFocusAreaPart) {
+	private static Optional<TopBottom<View>> getTopAndBottomInFocusArea(RecyclerView recyclerView, float noneFocusAreaPart) {
 		int i;
-		int scrollY = fromScrollView.getScrollY();
+		int scrollY = recyclerView.getScrollY();
 		View topVisibleChild = null;
-		for (i = 0; i < linearLayout.getChildCount(); i++) {
-			View child = linearLayout.getChildAt(i);
-			if (child.getY() + child.getHeight() >= scrollY + (fromScrollView.getHeight() * noneFocusAreaPart)) {
+		for (i = 0; i < recyclerView.getChildCount(); i++) {
+			View child = recyclerView.getChildAt(i);
+			if (child.getY() + child.getHeight() >= scrollY + (recyclerView.getHeight() * noneFocusAreaPart)) {
 				topVisibleChild = child;
 				break;
 			}
@@ -156,13 +140,42 @@ public class ScrollSynchronizer {
 			return Optional.empty();
 		}
 		View bottomVisibleChild = null;
-		for (; i < linearLayout.getChildCount(); i++) {
-			View child = linearLayout.getChildAt(i);
+		for (; i < recyclerView.getChildCount(); i++) {
+			View child = recyclerView.getChildAt(i);
 			bottomVisibleChild = child;
-			if (child.getY() + child.getHeight() >= scrollY + (fromScrollView.getHeight() * (1 - noneFocusAreaPart))) {
+			if (child.getY() + child.getHeight() >= scrollY + (recyclerView.getHeight() * (1 - noneFocusAreaPart))) {
 				break;
 			}
 		}
 		return Optional.of(new TopBottom<>(topVisibleChild, bottomVisibleChild));
+	}
+
+	public static class SelecatorSmoothScroller extends LinearSmoothScroller {
+		private final AtomicReference<Instant> finishTimeReference = new AtomicReference<>();
+		/**
+		 * @noinspection unused, FieldCanBeLocal - useful for debugging
+		 */
+		private final String sideName;
+
+		public SelecatorSmoothScroller(Context context, String sideName, List<AtomicReference<Instant>> finishTimesOfOtherSideScrollsFromThisSide) {
+			super(context);
+			this.sideName = sideName;
+			finishTimesOfOtherSideScrollsFromThisSide.add(finishTimeReference);
+		}
+
+		@Override
+		protected void onStop() {
+			super.onStop();
+			finishTimeReference.set(Instant.now());
+		}
+
+		@Override
+		protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
+			return super.calculateSpeedPerPixel(displayMetrics) * 2 * SECONDS_TO_SYNC_SCROLL;
+		}
+
+		public void doStop() {
+			stop();
+		}
 	}
 }

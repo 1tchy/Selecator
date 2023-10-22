@@ -3,25 +3,22 @@ package ch.laurinmurer.selecator.helper;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.view.animation.Animation;
-import android.view.animation.Transformation;
-import android.widget.ScrollView;
+import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.function.Predicate;
+import java.util.function.Consumer;
 
 public class SwipeListener implements View.OnTouchListener {
 	private static final int SWIPE_SPEED = 2;
-	private static final int MOVE_SPEED = 2;
 	private final boolean leftToRight;
-	private final ScrollView mListView;
-	private final Predicate<View> action;
+	private final RecyclerView recyclerView;
+	private final Consumer<View> action;
 	private float mDownX;
 	private int mSwipeSlop = -1;
 	private boolean mSwiping = false;
 	private boolean mItemPressed = false;
 
-	public SwipeListener(boolean leftToRight, ScrollView mListView, Predicate<View> action) {
-		this.mListView = mListView;
+	public SwipeListener(boolean leftToRight, RecyclerView recyclerView, Consumer<View> action) {
+		this.recyclerView = recyclerView;
 		this.leftToRight = leftToRight;
 		this.action = action;
 	}
@@ -52,7 +49,7 @@ public class SwipeListener implements View.OnTouchListener {
 				if (!mSwiping) {
 					if ((leftToRight && deltaX > mSwipeSlop) || (!leftToRight && -deltaX > mSwipeSlop)) {
 						mSwiping = true;
-						mListView.requestDisallowInterceptTouchEvent(true);
+						recyclerView.requestDisallowInterceptTouchEvent(true);
 //								mBackgroundContainer.showBackground(v.getTop(), v.getHeight());
 					}
 				}
@@ -91,27 +88,19 @@ public class SwipeListener implements View.OnTouchListener {
 					// velocity (via the VelocityTracker class) to send the item off or
 					// back at an appropriate speed.
 					long duration = Math.max(1, (int) ((1 - fractionCovered) * v.getWidth() / SWIPE_SPEED));
-					mListView.setEnabled(false);
+					recyclerView.setEnabled(false);
 					v.animate().setDuration(duration)
 							.alpha(endAlpha).translationX(endX)
 							.withEndAction(() -> {
 								if (remove) {
-									if (action.test(v)) {
-										v.startAnimation(createResizeAnimation(v));
-									} else {
-										v.setAlpha(1);
-										v.setTranslationX(0);
-										mSwiping = false;
-										mListView.setEnabled(true);
-									}
-								} else {
-									// Restore animated values
-									v.setAlpha(1);
-									v.setTranslationX(0);
-//												mBackgroundContainer.hideBackground();
-									mSwiping = false;
-									mListView.setEnabled(true);
+									action.accept(v);
 								}
+								// Restore animated values
+								v.setAlpha(1);
+								v.setTranslationX(0);
+//												mBackgroundContainer.hideBackground();
+								mSwiping = false;
+								recyclerView.setEnabled(true);
 							});
 				} else {
 					v.performClick();
@@ -123,30 +112,5 @@ public class SwipeListener implements View.OnTouchListener {
 				return false;
 		}
 		return true;
-	}
-
-	private Animation createResizeAnimation(View v) {
-		int height = v.getHeight();
-		Animation resize = new Animation() {
-			private boolean finished = false;
-
-			@Override
-			protected void applyTransformation(float interpolatedTime, Transformation t) {
-				if (finished) {
-					return;
-				}
-				v.getLayoutParams().height = height - (int) (height * interpolatedTime);
-				v.requestLayout();
-				if (interpolatedTime >= 1f) {
-					finished = true;
-//																binding.scrollViewLayout.removeView(v);
-					mSwiping = false;
-					mListView.setEnabled(true);
-				}
-			}
-
-		};
-		resize.setDuration(v.getHeight() / MOVE_SPEED);
-		return resize;
 	}
 }
