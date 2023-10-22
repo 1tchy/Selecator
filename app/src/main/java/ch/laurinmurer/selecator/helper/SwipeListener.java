@@ -94,11 +94,12 @@ public class SwipeListener implements View.OnTouchListener {
 							.withEndAction(() -> {
 								if (remove) {
 									action.accept(v);
-								}
-								// Restore animated values
-								v.setAlpha(1);
-								v.setTranslationX(0);
+								} else {
+									// Restore animated values
+									v.setAlpha(1);
+									v.setTranslationX(0);
 //												mBackgroundContainer.hideBackground();
+								}
 								mSwiping = false;
 								recyclerView.setEnabled(true);
 							});

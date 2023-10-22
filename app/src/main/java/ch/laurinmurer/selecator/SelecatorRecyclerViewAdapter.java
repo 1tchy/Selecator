@@ -67,6 +67,9 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		imageView.setImageBitmap(BitmapLoader.fromFile(path.get().resolve(data.imageFileName()).toFile(), getFilesMaxWidth()));
 		imageView.setOnClickListener(v -> showImageFullscreen(Uri.fromFile(path.get().resolve(data.imageFileName()).toFile())));
 		imageView.setOnTouchListener(swipeListener);
+		//Reset values because this view might be altered by the swipe listener
+		((View) imageView).setAlpha(1);
+		imageView.setTranslationX(0);
 	}
 
 	@Override
