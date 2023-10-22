@@ -1,7 +1,6 @@
 package ch.laurinmurer.selecator;
 
 import android.util.Log;
-import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.widget.AppCompatImageView;
 
@@ -25,17 +24,15 @@ public class FirstFragmentSide {
 	private final String side;
 	private static final Set<String> SUPPORTED_FILE_SUFFIXES = Set.of("bmp", "gif", "jpg", "jpeg", "png", "webp", "heic", "heif");
 	private final TextView pathLabel;
-	private final View.OnTouchListener swipeListener;
 	private final Runnable afterPathSet;
 	private final AtomicBoolean canFilesNowBeLoaded;
 	private final ExecutorService imageLoaderExecutor = Executors.newSingleThreadExecutor();
 	private final SelecatorRecyclerViewAdapter recyclerViewAdapter;
 	private final AtomicReference<Path> path;
 
-	public FirstFragmentSide(String side, TextView pathLabel, View.OnTouchListener swipeListener, Runnable afterPathSet, AtomicBoolean canFilesNowBeLoaded, AtomicReference<Path> pathReferenceHolder, SelecatorRecyclerViewAdapter recyclerViewAdapter) {
+	public FirstFragmentSide(String side, TextView pathLabel, Runnable afterPathSet, AtomicBoolean canFilesNowBeLoaded, AtomicReference<Path> pathReferenceHolder, SelecatorRecyclerViewAdapter recyclerViewAdapter) {
 		this.side = side;
 		this.pathLabel = pathLabel;
-		this.swipeListener = swipeListener;
 		this.afterPathSet = afterPathSet;
 		this.canFilesNowBeLoaded = canFilesNowBeLoaded;
 		this.path = pathReferenceHolder;
@@ -115,7 +112,7 @@ public class FirstFragmentSide {
 				.filter(f -> !f.getName().startsWith("."))
 				.filter(f -> hasASupportedSuffix(f.getName()))
 				.sorted(Comparator.comparingLong(File::lastModified).reversed())
-				.forEach(anImage -> loadImage(swipeListener, anImage));
+				.forEach(this::loadImage);
 	}
 
 	private static boolean hasASupportedSuffix(String fileName) {
@@ -127,8 +124,8 @@ public class FirstFragmentSide {
 		return false;
 	}
 
-	public SelecatorRecyclerViewAdapter.Data loadImage(View.OnTouchListener swipeListener, File anImage) {
-		SelecatorRecyclerViewAdapter.Data data = new SelecatorRecyclerViewAdapter.Data(anImage, swipeListener);
+	public SelecatorRecyclerViewAdapter.Data loadImage(File anImage) {
+		SelecatorRecyclerViewAdapter.Data data = new SelecatorRecyclerViewAdapter.Data(anImage);
 		recyclerViewAdapter.addData(data);
 		return data;
 	}

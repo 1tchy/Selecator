@@ -38,8 +38,6 @@ public class FirstFragment extends Fragment {
 
 	private static final String PREFS_NAME = "Selecator.FirstFragment";
 	private FragmentFirstBinding binding;
-	private View.OnTouchListener leftToRightSwipeListener;
-	private View.OnTouchListener rightToLeftSwipeListener;
 	private FirstFragmentSide fromSide;
 	private FirstFragmentSide toSide;
 	private final AtomicBoolean canFilesNowBeLoaded = new AtomicBoolean(false);
@@ -60,7 +58,7 @@ public class FirstFragment extends Fragment {
 						.build().show()
 		);
 		List<Consumer<SelecatorRecyclerViewAdapter.Data>> leftToRightSwipedObserver = new ArrayList<>(1);
-		leftToRightSwipeListener = new SwipeListener(true, binding.fromRecyclerView, v -> {
+		View.OnTouchListener leftToRightSwipeListener = new SwipeListener(true, binding.fromRecyclerView, v -> {
 			SelecatorRecyclerViewAdapter.Data imageData = fromSide.getImageDataForView((AppCompatImageView) v);
 			String fileName = imageData.imageFileName();
 			Path anImage = fromSide.getPath().resolve(fileName);
@@ -68,12 +66,12 @@ public class FirstFragment extends Fragment {
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
 				fromSide.removeImage(imageData);
-				SelecatorRecyclerViewAdapter.Data movedFile = toSide.loadImage(rightToLeftSwipeListener, target.toFile());
+				SelecatorRecyclerViewAdapter.Data movedFile = toSide.loadImage(target.toFile());
 				leftToRightSwipedObserver.forEach(observer -> observer.accept(movedFile));
 			}
 		});
 		List<Consumer<SelecatorRecyclerViewAdapter.Data>> rightToLeftSwipedObserver = new ArrayList<>(1);
-		rightToLeftSwipeListener = new SwipeListener(false, binding.toRecyclerView, v -> {
+		View.OnTouchListener rightToLeftSwipeListener = new SwipeListener(false, binding.toRecyclerView, v -> {
 			SelecatorRecyclerViewAdapter.Data imageData = toSide.getImageDataForView((AppCompatImageView) v);
 			String fileName = imageData.imageFileName();
 			Path anImage = toSide.getPath().resolve(fileName);
@@ -81,16 +79,15 @@ public class FirstFragment extends Fragment {
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
 				toSide.removeImage(imageData);
-				SelecatorRecyclerViewAdapter.Data movedFile = fromSide.loadImage(leftToRightSwipeListener, target.toFile());
+				SelecatorRecyclerViewAdapter.Data movedFile = fromSide.loadImage(target.toFile());
 				rightToLeftSwipedObserver.forEach(observer -> observer.accept(movedFile));
 			}
 		});
 
 		AtomicReference<Path> fromPath = new AtomicReference<>();
-		SelecatorRecyclerViewAdapter fromSideRecyclerViewAdapter = new SelecatorRecyclerViewAdapter(requireContext(), binding.fromRecyclerView, requireActivity()::runOnUiThread, fromPath);
+		SelecatorRecyclerViewAdapter fromSideRecyclerViewAdapter = new SelecatorRecyclerViewAdapter(requireContext(), binding.fromRecyclerView, leftToRightSwipeListener, requireActivity()::runOnUiThread, fromPath);
 		fromSide = new FirstFragmentSide("from",
 				binding.fromPath,
-				leftToRightSwipeListener,
 				this::checkIntroductionStillNeeded,
 				canFilesNowBeLoaded,
 				fromPath,
@@ -99,10 +96,9 @@ public class FirstFragment extends Fragment {
 		binding.fromRecyclerView.addItemDecoration(createDividerItemDecoration(requireContext()));
 
 		AtomicReference<Path> toPath = new AtomicReference<>();
-		SelecatorRecyclerViewAdapter toSideRecyclerViewAdapter = new SelecatorRecyclerViewAdapter(requireContext(), binding.toRecyclerView, requireActivity()::runOnUiThread, toPath);
+		SelecatorRecyclerViewAdapter toSideRecyclerViewAdapter = new SelecatorRecyclerViewAdapter(requireContext(), binding.toRecyclerView, rightToLeftSwipeListener, requireActivity()::runOnUiThread, toPath);
 		toSide = new FirstFragmentSide("to",
 				binding.toPath,
-				rightToLeftSwipeListener,
 				this::checkIntroductionStillNeeded,
 				canFilesNowBeLoaded,
 				toPath,

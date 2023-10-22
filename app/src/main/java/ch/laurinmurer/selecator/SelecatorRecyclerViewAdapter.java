@@ -35,12 +35,14 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 
 	private final Context context;
 	private final RecyclerView recyclerView;
+	private final View.OnTouchListener swipeListener;
 	private final Consumer<Runnable> onUiThreadRunner;
 	private final AtomicReference<Path> path;
 
-	public SelecatorRecyclerViewAdapter(Context context, RecyclerView recyclerView, Consumer<Runnable> onUiThreadRunner, AtomicReference<Path> path) {
+	public SelecatorRecyclerViewAdapter(Context context, RecyclerView recyclerView, View.OnTouchListener swipeListener, Consumer<Runnable> onUiThreadRunner, AtomicReference<Path> path) {
 		this.context = context;
 		this.recyclerView = recyclerView;
+		this.swipeListener = swipeListener;
 		this.onUiThreadRunner = onUiThreadRunner;
 		this.path = path;
 	}
@@ -64,7 +66,7 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		currentImageBindings.put(imageView, data);
 		imageView.setImageBitmap(BitmapLoader.fromFile(path.get().resolve(data.imageFileName()).toFile(), getFilesMaxWidth()));
 		imageView.setOnClickListener(v -> showImageFullscreen(Uri.fromFile(path.get().resolve(data.imageFileName()).toFile())));
-		imageView.setOnTouchListener(data.swipeListener());
+		imageView.setOnTouchListener(swipeListener);
 	}
 
 	@Override
@@ -145,9 +147,9 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		}
 	}
 
-	public record Data(String imageFileName, long lastModified, View.OnTouchListener swipeListener) {
-		public Data(File imageFile, View.OnTouchListener swipeListener) {
-			this(imageFile.getName(), imageFile.lastModified(), swipeListener);
+	public record Data(String imageFileName, long lastModified) {
+		public Data(File imageFile) {
+			this(imageFile.getName(), imageFile.lastModified());
 		}
 
 		public Instant lastModifiedInstant() {
