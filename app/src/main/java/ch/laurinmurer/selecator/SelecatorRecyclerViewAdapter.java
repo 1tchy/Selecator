@@ -89,6 +89,10 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		return dataSet.get(index);
 	}
 
+	public int indexOf(Data data) {
+		return dataSet.indexOf(data);
+	}
+
 	public void removeData(Data data) {
 		onUiThreadRunner.accept(() -> dataSet.remove(data));
 	}

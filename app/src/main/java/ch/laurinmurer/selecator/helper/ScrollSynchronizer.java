@@ -114,7 +114,17 @@ public class ScrollSynchronizer {
 	}
 
 	public void centerOtherView(int childToScrollTo) {
-		LinearSmoothScroller smoothScroller = new SelecatorSmoothScroller(ScrollSynchronizer.this.recyclerView.getContext(), sideName, finishTimesOfOtherSideScrollsFromThisSide);
+		Boolean shouldSmoothScroll = getTopAndBottomInFocusArea(otherRecyclerView, 0)
+				.map(topAndBottomViews -> {
+					int topIndex = otherRecyclerViewAdapter.indexOf(otherRecyclerViewAdapter.getCurrentBinding((AppCompatImageView) topAndBottomViews.top()));
+					int bottomIndex = otherRecyclerViewAdapter.indexOf(otherRecyclerViewAdapter.getCurrentBinding((AppCompatImageView) topAndBottomViews.bottom()));
+					int maxIndexesToScroll = Math.max(1, bottomIndex - topIndex) * 2;
+					return childToScrollTo > topIndex - maxIndexesToScroll && childToScrollTo < bottomIndex + maxIndexesToScroll;
+				}).orElse(true);
+		if (!shouldSmoothScroll) {
+			otherRecyclerView.scrollToPosition(childToScrollTo);
+		}
+		LinearSmoothScroller smoothScroller = new SelecatorSmoothScroller(otherRecyclerView.getContext(), sideName, finishTimesOfOtherSideScrollsFromThisSide);
 		smoothScroller.setTargetPosition(childToScrollTo);
 		requireNonNull(otherRecyclerView.getLayoutManager()).startSmoothScroll(smoothScroller);
 	}
