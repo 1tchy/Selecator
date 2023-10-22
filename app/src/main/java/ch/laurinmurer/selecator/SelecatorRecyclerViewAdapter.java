@@ -49,24 +49,24 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 
 	@NonNull
 	@Override
+	@SuppressLint("ClickableViewAccessibility")
 	public SelecatorViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 		AppCompatImageView imageView = new AppCompatImageView(context);
 		imageView.setAdjustViewBounds(true);
 		imageView.setScaleType(ImageView.ScaleType.FIT_XY);
 		imageView.setBackgroundColor(Color.RED);
 		imageView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		imageView.setOnTouchListener(swipeListener);
 		return new SelecatorViewHolder(imageView);
 	}
 
 	@Override
-	@SuppressLint("ClickableViewAccessibility")
 	public void onBindViewHolder(@NonNull SelecatorViewHolder holder, int position) {
 		Data data = dataSet.get(position);
 		AppCompatImageView imageView = holder.getImageView();
 		currentImageBindings.put(imageView, data);
 		imageView.setImageBitmap(BitmapLoader.fromFile(path.get().resolve(data.imageFileName()).toFile(), getFilesMaxWidth()));
 		imageView.setOnClickListener(v -> showImageFullscreen(Uri.fromFile(path.get().resolve(data.imageFileName()).toFile())));
-		imageView.setOnTouchListener(swipeListener);
 		//Reset values because this view might be altered by the swipe listener
 		((View) imageView).setAlpha(1);
 		imageView.setTranslationX(0);
