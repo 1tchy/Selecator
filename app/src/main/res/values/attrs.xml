@@ -1,6 +1,7 @@
 <resources>
     <declare-styleable name="FullscreenAttrs">
         <attr name="colorPrimary" format="color" />
+        <attr name="halfTransparentColorPrimary" format="color" />
         <attr name="fullscreenBackgroundColor" format="color" />
         <attr name="fullscreenTextColor" format="color" />
         <attr name="scrollbarColor" format="color" />

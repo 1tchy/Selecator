@@ -11,12 +11,14 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.VideoView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SortedList;
 import androidx.recyclerview.widget.SortedListAdapterCallback;
 import ch.laurinmurer.selecator.helper.CachedBitmapLoader;
+import ch.laurinmurer.selecator.helper.FileSuffixHelper;
 import com.github.chrisbanes.photoview.PhotoView;
 
 import java.io.File;
@@ -71,7 +73,7 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		AppCompatImageView imageView = holder.getImageView();
 		currentImageBindings.put(imageView, data);
 		imageView.setImageBitmap(cachedBitmapLoader.join().load(data.imageFileName()));
-		imageView.setOnClickListener(v -> showImageFullscreen(Uri.fromFile(path.get().resolve(data.imageFileName()).toFile())));
+		imageView.setOnClickListener(v -> showImageFullscreen(data.imageFileName()));
 		//Reset values because this view might be altered by the swipe listener
 		((View) imageView).setAlpha(1);
 		imageView.setTranslationX(0);
@@ -113,20 +115,43 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		});
 	}
 
-	private void showImageFullscreen(Uri image) {
+	private void showImageFullscreen(String fileName) {
 		Dialog builder = new Dialog(context, android.R.style.Theme_Light);
 		builder.requestWindowFeature(Window.FEATURE_NO_TITLE);
 		builder.getWindow().setBackgroundDrawable(new ColorDrawable(Color.argb(200, 0, 0, 0)));
 		builder.setOnDismissListener(dialogInterface -> {
 		});
 
-		PhotoView imageView = new PhotoView(context);
-		imageView.setImageURI(image);
-		imageView.setOnClickListener(v -> builder.dismiss());
-		builder.addContentView(imageView, new RelativeLayout.LayoutParams(
-				ViewGroup.LayoutParams.MATCH_PARENT,
-				ViewGroup.LayoutParams.MATCH_PARENT));
+		View contentView = createFullscreenContentView(fileName);
+		contentView.setOnClickListener(v -> builder.dismiss());
+		builder.addContentView(wrapInRelativeLayout(contentView), buildCenteringRelativeLayout());
 		builder.show();
+	}
+
+	private View createFullscreenContentView(String fileName) {
+		if (FileSuffixHelper.hasAVideoSuffix(fileName)) {
+			VideoView videoView = new VideoView(context);
+			videoView.setVideoURI(Uri.fromFile(path.get().resolve(fileName).toFile()));
+			videoView.setLayoutParams(buildCenteringRelativeLayout());
+			videoView.start();
+			return videoView;
+		} else {
+			PhotoView imageView = new PhotoView(context);
+			imageView.setImageURI(Uri.fromFile(path.get().resolve(fileName).toFile()));
+			return imageView;
+		}
+	}
+
+	private RelativeLayout wrapInRelativeLayout(View view) {
+		RelativeLayout relativeLayout = new RelativeLayout(context);
+		relativeLayout.addView(view);
+		return relativeLayout;
+	}
+
+	private static RelativeLayout.LayoutParams buildCenteringRelativeLayout() {
+		RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+		layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+		return layoutParams;
 	}
 
 	public static class SelecatorViewHolder extends RecyclerView.ViewHolder {

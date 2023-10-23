@@ -3,6 +3,7 @@ package ch.laurinmurer.selecator;
 import android.util.Log;
 import android.widget.TextView;
 import androidx.appcompat.widget.AppCompatImageView;
+import ch.laurinmurer.selecator.helper.FileSuffixHelper;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -22,7 +23,6 @@ public class FirstFragmentSide {
 	 * @noinspection unused, FieldCanBeLocal - useful for debugging
 	 */
 	private final String side;
-	private static final Set<String> SUPPORTED_FILE_SUFFIXES = Set.of("bmp", "gif", "jpg", "jpeg", "png", "webp", "heic", "heif");
 	private final TextView pathLabel;
 	private final Runnable afterPathSet;
 	private final AtomicBoolean canFilesNowBeLoaded;
@@ -110,18 +110,9 @@ public class FirstFragmentSide {
 		Arrays.stream(filesInPath)
 				.filter(File::isFile)
 				.filter(f -> !f.getName().startsWith("."))
-				.filter(f -> hasASupportedSuffix(f.getName()))
+				.filter(f -> FileSuffixHelper.hasASupportedSuffix(f.getName()))
 				.sorted(Comparator.comparingLong(File::lastModified).reversed())
 				.forEach(this::loadImage);
-	}
-
-	private static boolean hasASupportedSuffix(String fileName) {
-		int lastIndexOf = fileName.lastIndexOf(".");
-		if (lastIndexOf > 0) {
-			String suffix = fileName.substring(lastIndexOf + 1);
-			return SUPPORTED_FILE_SUFFIXES.contains(suffix.toLowerCase());
-		}
-		return false;
 	}
 
 	public SelecatorRecyclerViewAdapter.Data loadImage(File anImage) {
