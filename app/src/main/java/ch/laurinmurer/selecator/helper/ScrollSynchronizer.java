@@ -103,7 +103,7 @@ public class ScrollSynchronizer {
 					for (; indexToScrollTo < otherRecyclerViewAdapter.getItemCount(); indexToScrollTo++) {
 						Instant lastModifiedAtIndex = otherRecyclerViewAdapter.getData(indexToScrollTo).lastModifiedInstant();
 						if (!lastModifiedAtIndex.isAfter(minTimeToShow)) {
-							Log.i("DEB", "Will scroll further up to image of " + lastModifiedAtIndex);
+							Log.i("DEB", "Will scroll other side of '" + sideName + "' further up to image of " + lastModifiedAtIndex);
 							break;
 						}
 					}
@@ -124,7 +124,7 @@ public class ScrollSynchronizer {
 		if (!shouldSmoothScroll) {
 			otherRecyclerView.scrollToPosition(childToScrollTo);
 		}
-		LinearSmoothScroller smoothScroller = new SelecatorSmoothScroller(otherRecyclerView.getContext(), sideName, finishTimesOfOtherSideScrollsFromThisSide);
+		LinearSmoothScroller smoothScroller = new SelecatorSmoothScroller(otherRecyclerView.getContext(), "other side of " + sideName, finishTimesOfOtherSideScrollsFromThisSide);
 		smoothScroller.setTargetPosition(childToScrollTo);
 		requireNonNull(otherRecyclerView.getLayoutManager()).startSmoothScroll(smoothScroller);
 	}
