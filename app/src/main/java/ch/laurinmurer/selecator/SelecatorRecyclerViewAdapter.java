@@ -16,7 +16,7 @@ import androidx.appcompat.widget.AppCompatImageView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SortedList;
 import androidx.recyclerview.widget.SortedListAdapterCallback;
-import ch.laurinmurer.selecator.helper.BitmapLoader;
+import ch.laurinmurer.selecator.helper.CachedBitmapLoader;
 import com.github.chrisbanes.photoview.PhotoView;
 
 import java.io.File;
@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -38,6 +39,7 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 	private final View.OnTouchListener swipeListener;
 	private final Consumer<Runnable> onUiThreadRunner;
 	private final AtomicReference<Path> path;
+	private final CompletableFuture<CachedBitmapLoader> cachedBitmapLoader = new CompletableFuture<>();
 
 	public SelecatorRecyclerViewAdapter(Context context, RecyclerView recyclerView, View.OnTouchListener swipeListener, Consumer<Runnable> onUiThreadRunner, AtomicReference<Path> path) {
 		this.context = context;
@@ -45,6 +47,9 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		this.swipeListener = swipeListener;
 		this.onUiThreadRunner = onUiThreadRunner;
 		this.path = path;
+		recyclerView.getViewTreeObserver().addOnGlobalLayoutListener(() ->
+				cachedBitmapLoader.complete(new CachedBitmapLoader(path, recyclerView.getWidth(), context))
+		);
 	}
 
 	@NonNull
@@ -65,7 +70,7 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		Data data = dataSet.get(position);
 		AppCompatImageView imageView = holder.getImageView();
 		currentImageBindings.put(imageView, data);
-		imageView.setImageBitmap(BitmapLoader.fromFile(path.get().resolve(data.imageFileName()).toFile(), getFilesMaxWidth()));
+		imageView.setImageBitmap(cachedBitmapLoader.join().load(data.imageFileName()));
 		imageView.setOnClickListener(v -> showImageFullscreen(Uri.fromFile(path.get().resolve(data.imageFileName()).toFile())));
 		//Reset values because this view might be altered by the swipe listener
 		((View) imageView).setAlpha(1);
@@ -82,6 +87,7 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 	}
 
 	public void addData(Data data) {
+		cachedBitmapLoader.thenAccept(loader -> loader.suggestCache(data.imageFileName()));
 		onUiThreadRunner.accept(() -> dataSet.add(data));
 	}
 
@@ -94,6 +100,7 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 	}
 
 	public void removeData(Data data) {
+		cachedBitmapLoader.thenAccept(loader -> loader.suggestRemoveFromCache(data.imageFileName()));
 		onUiThreadRunner.accept(() -> dataSet.remove(data));
 	}
 
@@ -104,24 +111,6 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 				recyclerView.scrollToPosition(index);
 			}
 		});
-	}
-
-	private int getFilesMaxWidth() {
-		int sleepTime = 1;
-		do {
-			int width = recyclerView.getWidth();
-			if (width > 0) {
-				return width;
-			} else {
-				try {
-					Thread.sleep(sleepTime);
-				} catch (InterruptedException e) {
-					return width;
-				}
-				sleepTime *= 2;
-			}
-		} while (sleepTime < 4096);//total 4s
-		return 512;//pixel
 	}
 
 	private void showImageFullscreen(Uri image) {
