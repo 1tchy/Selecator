@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static java.util.Objects.requireNonNull;
 
 public class ScrollSynchronizer {
-	private static final int SECONDS_TO_SYNC_SCROLL = 15;
+	private static final int SECONDS_TO_SYNC_SCROLL = 8;
 	private final String sideName;
 	private final RecyclerView recyclerView;
 	private final FirstFragmentSide side;
