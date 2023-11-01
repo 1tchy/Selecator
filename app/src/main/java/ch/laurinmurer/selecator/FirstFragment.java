@@ -65,8 +65,8 @@ public class FirstFragment extends Fragment {
 			Path target = toSide.getPath().resolve(fileName);
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
-				fromSide.removeImage(imageData);
 				SelecatorRecyclerViewAdapter.Data movedFile = toSide.loadImage(target.toFile());
+				fromSide.removeImage(imageData);
 				leftToRightSwipedObserver.forEach(observer -> observer.accept(movedFile));
 			}
 		});
@@ -78,8 +78,8 @@ public class FirstFragment extends Fragment {
 			Path target = fromSide.getPath().resolve(fileName);
 			boolean moveSuccessful = move(v, anImage, target);
 			if (moveSuccessful) {
-				toSide.removeImage(imageData);
 				SelecatorRecyclerViewAdapter.Data movedFile = fromSide.loadImage(target.toFile());
+				toSide.removeImage(imageData);
 				rightToLeftSwipedObserver.forEach(observer -> observer.accept(movedFile));
 			}
 		});
