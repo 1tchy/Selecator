@@ -76,11 +76,11 @@ public class ScrollSynchronizer {
 		Optional<TopBottom<View>> sichtbareBilder = getTopAndBottomInFocusArea(recyclerView, 0.35f);
 		if (sichtbareBilder.isPresent()) {
 			TopBottom<Instant> sichtbarerZeitbereich = sichtbareBilder.get()
-					.map(bild -> side.getLastModifiedForImage((AppCompatImageView) bild));
+					.map(bild -> side.getTimestampForImage((AppCompatImageView) bild));
 			Optional<TopBottom<View>> sichtbareBilderAndereSeite = getTopAndBottomInFocusArea(otherRecyclerView, 0.4f);
 			if (sichtbareBilderAndereSeite.isPresent()) {
 				TopBottom<Instant> sichtbarerZeitbereichAndereSeite = sichtbareBilderAndereSeite.get()
-						.map(bild -> otherSide.getLastModifiedForImage((AppCompatImageView) bild));
+						.map(bild -> otherSide.getTimestampForImage((AppCompatImageView) bild));
 				boolean shouldShowImageFurtherUp = sichtbarerZeitbereichAndereSeite.top().isBefore(sichtbarerZeitbereich.bottom());
 				boolean shouldShowImageFurtherDown = sichtbarerZeitbereich.top().isBefore(sichtbarerZeitbereichAndereSeite.bottom());
 				if (shouldShowImageFurtherDown) {
@@ -89,32 +89,32 @@ public class ScrollSynchronizer {
 					}
 					Instant maxTimeToShow = sichtbarerZeitbereich.top();
 					int indexToScrollTo = 0;
-					Instant lastModifiedAtIndex = null;
+					Instant timeAtIndex = null;
 					for (; indexToScrollTo < otherRecyclerViewAdapter.getItemCount(); indexToScrollTo++) {
-						lastModifiedAtIndex = otherRecyclerViewAdapter.getData(indexToScrollTo).lastModifiedInstant();
-						if (lastModifiedAtIndex.isBefore(maxTimeToShow)) {
+						timeAtIndex = otherRecyclerViewAdapter.getData(indexToScrollTo).time();
+						if (timeAtIndex.isBefore(maxTimeToShow)) {
 							indexToScrollTo--;
 							break;
 						}
 					}
 					Integer currentTarget = otherSideCurrentScrollTarget.get();
 					if (currentTarget == null || currentTarget != indexToScrollTo) {
-						Log.i("DEB", "Will scroll other side of '" + sideName + "' further down to image above the one at " + lastModifiedAtIndex + " because topmost is from " + maxTimeToShow);
+						Log.i("DEB", "Will scroll other side of '" + sideName + "' further down to image above the one at " + timeAtIndex + " because topmost is from " + maxTimeToShow);
 						centerOtherView(indexToScrollTo);
 					}
 				} else if (shouldShowImageFurtherUp) {
 					Instant minTimeToShow = sichtbarerZeitbereich.bottom();
 					int indexToScrollTo = 0;
-					Instant lastModifiedAtIndex = null;
+					Instant timeAtIndex = null;
 					for (; indexToScrollTo < otherRecyclerViewAdapter.getItemCount(); indexToScrollTo++) {
-						lastModifiedAtIndex = otherRecyclerViewAdapter.getData(indexToScrollTo).lastModifiedInstant();
-						if (!lastModifiedAtIndex.isAfter(minTimeToShow)) {
+						timeAtIndex = otherRecyclerViewAdapter.getData(indexToScrollTo).time();
+						if (!timeAtIndex.isAfter(minTimeToShow)) {
 							break;
 						}
 					}
 					Integer currentTarget = otherSideCurrentScrollTarget.get();
 					if (currentTarget == null || currentTarget != indexToScrollTo) {
-						Log.i("DEB", "Will scroll other side of '" + sideName + "' further up to image of " + lastModifiedAtIndex);
+						Log.i("DEB", "Will scroll other side of '" + sideName + "' further up to image of " + timeAtIndex);
 						centerOtherView(indexToScrollTo);
 					}
 				}

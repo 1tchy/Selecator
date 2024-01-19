@@ -5,6 +5,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import androidx.exifinterface.media.ExifInterface;
 import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,24 +13,34 @@ import android.view.Window;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.VideoView;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SortedList;
 import androidx.recyclerview.widget.SortedListAdapterCallback;
+
 import ch.laurinmurer.selecator.helper.CachedBitmapLoader;
 import ch.laurinmurer.selecator.helper.FileSuffixHelper;
+
 import com.github.chrisbanes.photoview.PhotoView;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<SelecatorRecyclerViewAdapter.SelecatorViewHolder> {
 
@@ -168,20 +179,95 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		}
 	}
 
-	public record Data(String imageFileName, long lastModified) {
-		public Data(File imageFile) {
-			this(imageFile.getName(), imageFile.lastModified());
+	public record Data(String imageFileName, long timestamp) {
+		private static final Pattern nonZeroTimePattern = Pattern.compile(".*[1-9].*");
+		private static final SimpleDateFormat formatter;
+		private static final SimpleDateFormat formatterTz;
+
+		static {
+			formatter = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+			formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+			formatterTz = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss XXX", Locale.US);
+			formatterTz.setTimeZone(TimeZone.getTimeZone("UTC"));
 		}
 
-		public Instant lastModifiedInstant() {
-			return Instant.ofEpochMilli(lastModified());
+		public Data(File imageFile) {
+			this(imageFile.getName(), getDate(imageFile));
+		}
+
+		private static long getDate(File imageFile) {
+			try {
+				long exifDateTimeOriginal = getExifDateTimeOriginal(new ExifInterface(imageFile));
+				if (exifDateTimeOriginal > 0) {
+					return exifDateTimeOriginal;
+				}
+			} catch (IOException ignored) {
+			}
+			return imageFile.lastModified();
+		}
+
+		/**
+		 * This is basically "new ExifInterface(imageFile).getDateTimeOriginal())" but the other method is only available from API-Level 31.
+		 */
+		private static long getExifDateTimeOriginal(ExifInterface exifInterface) {
+			// return exifInterface.getDateTimeOriginal();
+			return parseDateTime(exifInterface.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL),
+					exifInterface.getAttribute(ExifInterface.TAG_SUBSEC_TIME_ORIGINAL),
+					exifInterface.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL));
+		}
+
+		private static long parseDateTime(String dateTimeString, String subSecs, String offsetString) {
+			if (dateTimeString == null || !nonZeroTimePattern.matcher(dateTimeString).matches()) {
+				return -1;
+			}
+
+			ParsePosition pos = new ParsePosition(0);
+			try {
+				// The exif field is in local time. Parsing it as if it is UTC will yield time
+				// since 1/1/1970 local time
+				Date datetime;
+				synchronized (formatter) {
+					datetime = formatter.parse(dateTimeString, pos);
+				}
+
+				if (offsetString != null) {
+					dateTimeString = dateTimeString + " " + offsetString;
+					ParsePosition position = new ParsePosition(0);
+					synchronized (formatterTz) {
+						datetime = formatterTz.parse(dateTimeString, position);
+					}
+				}
+
+				if (datetime == null) {
+					return -1;
+				}
+				long msecs = datetime.getTime();
+
+				if (subSecs != null) {
+					try {
+						long sub = Long.parseLong(subSecs);
+						while (sub > 1000) {
+							sub /= 10;
+						}
+						msecs += sub;
+					} catch (NumberFormatException ignored) {
+					}
+				}
+				return msecs;
+			} catch (IllegalArgumentException e) {
+				return -1;
+			}
+		}
+
+		public Instant time() {
+			return Instant.ofEpochMilli(timestamp());
 		}
 
 		public static SortedListAdapterCallback<Data> createSorter(SelecatorRecyclerViewAdapter adapter) {
 			return new SortedListAdapterCallback<>(adapter) {
 				@Override
 				public int compare(Data o1, Data o2) {
-					return -Long.compare(o1.lastModified(), o2.lastModified());
+					return -Long.compare(o1.timestamp(), o2.timestamp());
 				}
 
 				@Override

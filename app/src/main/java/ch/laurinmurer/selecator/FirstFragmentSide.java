@@ -2,7 +2,9 @@ package ch.laurinmurer.selecator;
 
 import android.util.Log;
 import android.widget.TextView;
+
 import androidx.appcompat.widget.AppCompatImageView;
+
 import ch.laurinmurer.selecator.helper.FileSuffixHelper;
 
 import java.io.File;
@@ -51,8 +53,8 @@ public class FirstFragmentSide {
 		return recyclerViewAdapter.getCurrentBinding(imageView);
 	}
 
-	public Instant getLastModifiedForImage(AppCompatImageView imageView) {
-		return Instant.ofEpochMilli(getImageDataForView(imageView).lastModified());
+	public Instant getTimestampForImage(AppCompatImageView imageView) {
+		return Instant.ofEpochMilli(getImageDataForView(imageView).timestamp());
 	}
 
 	public Path getPath() {
