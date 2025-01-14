@@ -5,7 +5,9 @@ import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+
 import androidx.exifinterface.media.ExifInterface;
+
 import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
@@ -83,7 +85,7 @@ public class SelecatorRecyclerViewAdapter extends RecyclerView.Adapter<Selecator
 		Data data = dataSet.get(position);
 		AppCompatImageView imageView = holder.getImageView();
 		currentImageBindings.put(imageView, data);
-		imageView.setImageBitmap(cachedBitmapLoader.join().load(data.imageFileName()));
+		imageView.setImageBitmap(cachedBitmapLoader.join().load(data.imageFileName()).orElse(null));
 		imageView.setOnClickListener(v -> showImageFullscreen(data.imageFileName()));
 		//Reset values because this view might be altered by the swipe listener
 		((View) imageView).setAlpha(1);

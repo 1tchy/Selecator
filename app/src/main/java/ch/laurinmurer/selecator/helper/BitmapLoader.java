@@ -3,23 +3,28 @@ package ch.laurinmurer.selecator.helper;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+
 import androidx.exifinterface.media.ExifInterface;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 public class BitmapLoader {
 
 	private BitmapLoader() {
 	}
 
-	public static Bitmap fromFile(File image, int maxWidth) {
+	public static Optional<Bitmap> fromFile(File image, int maxWidth) {
 		BitmapFactory.Options bounds = loadBounds(image);
 		int sampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, maxWidth, 1);
 
 		BitmapFactory.Options options = new BitmapFactory.Options();
 		options.inSampleSize = sampleSize;
 		Bitmap bitmapPhoto = BitmapFactory.decodeFile(image.getPath(), options);
+		if (bitmapPhoto == null) {
+			return Optional.empty();
+		}
 
 		int orientation = loadExifOrientation(image);
 		Matrix matrix = new Matrix();
@@ -51,8 +56,7 @@ public class BitmapLoader {
 
 		}
 
-		return bitmap;
-
+		return Optional.of(bitmap);
 	}
 
 	private static int loadExifOrientation(File image) {
