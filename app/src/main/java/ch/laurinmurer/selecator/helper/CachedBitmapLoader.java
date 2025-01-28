@@ -1,5 +1,8 @@
 package ch.laurinmurer.selecator.helper;
 
+import static android.content.Context.ACTIVITY_SERVICE;
+import static java.util.Objects.requireNonNull;
+
 import android.app.ActivityManager;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -10,8 +13,6 @@ import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
-import ch.laurinmurer.selecator.R;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -20,8 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static android.content.Context.ACTIVITY_SERVICE;
-import static java.util.Objects.requireNonNull;
+import ch.laurinmurer.selecator.R;
 
 public class CachedBitmapLoader {
 	private static final int MIN_FREE_HEAP_SPACE_MB = 10;
@@ -49,18 +49,18 @@ public class CachedBitmapLoader {
 	public Optional<Bitmap> load(String filename) {
 		return cache.computeIfAbsent(filename, f -> {
 			if (FileSuffixHelper.hasAVideoSuffix(f)) {
-				Bitmap bitmap = retrieveVideoFrameFromVideo(basePath.get().resolve(f).toString());
-				return Optional.of(overlayDrawable(bitmap, requireNonNull(ContextCompat.getDrawable(context, R.drawable.play))));
+				return retrieveVideoFrameFromVideo(basePath.get().resolve(f).toString()).map(bitmap ->
+						overlayDrawable(bitmap, requireNonNull(ContextCompat.getDrawable(context, R.drawable.play))));
 			} else {
 				return BitmapLoader.fromFile(basePath.get().resolve(f).toFile(), maxWidth);
 			}
 		});
 	}
 
-	public static Bitmap retrieveVideoFrameFromVideo(String videoPath) {
+	public static Optional<Bitmap> retrieveVideoFrameFromVideo(String videoPath) {
 		try (MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever()) {
 			mediaMetadataRetriever.setDataSource(videoPath);
-			return mediaMetadataRetriever.getFrameAtTime();
+			return Optional.ofNullable(mediaMetadataRetriever.getFrameAtTime());
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
