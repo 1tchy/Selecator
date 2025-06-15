@@ -11,5 +11,6 @@ New Release
 -----------
 . Go to the Google Play Console > "Testen und veröffentlichen" > "Produktion" > "Neuen Release erstellen"
 . Android Studio > "Build" > "Generate Signed App Bundle or APK..." > "Android App Bundle" > Next > Next > Create
-. The rest with common sense :-)
+. Then continue with common sense :-)
+. Finally: don't forget to "1 Änderung zur Überprüfung senden"
 
