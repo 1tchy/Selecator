@@ -9,19 +9,21 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DividerItemDecoration;
-import ch.laurinmurer.selecator.databinding.FragmentFirstBinding;
-import ch.laurinmurer.selecator.helper.ScrollSynchronizer;
-import ch.laurinmurer.selecator.helper.SwipeListener;
+
 import com.google.android.material.snackbar.Snackbar;
 import com.obsez.android.lib.filechooser.ChooserDialog;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,6 +35,10 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import ch.laurinmurer.selecator.databinding.FragmentFirstBinding;
+import ch.laurinmurer.selecator.helper.ScrollSynchronizer;
+import ch.laurinmurer.selecator.helper.SwipeListener;
 
 public class FirstFragment extends Fragment {
 
@@ -214,7 +220,15 @@ public class FirstFragment extends Fragment {
 	@SuppressWarnings("unused")
 	private static boolean move(View view, Path anImage, Path target) {
 		try {
-			Files.move(anImage, target);
+			try {
+				Files.move(anImage, target);
+			} catch (FileAlreadyExistsException fileAlreadyExistsException) {
+				if (!anImage.equals(target) && !filesMismatch(anImage, target)) {
+					Files.delete(anImage); //The image already exists at the target
+				} else {
+					throw fileAlreadyExistsException;
+				}
+			}
 			MediaScannerConnection.scanFile(view.getContext(), new String[]{anImage.toAbsolutePath().toString()}, null /*mimeTypes*/, (s, uri) -> {
 			});
 			MediaScannerConnection.scanFile(view.getContext(), new String[]{target.toAbsolutePath().toString()}, null /*mimeTypes*/, (s, uri) -> {
@@ -227,6 +241,26 @@ public class FirstFragment extends Fragment {
 		}
 		Log.i("Success", "Moved " + anImage.getFileName() + " to " + target);
 		return true;
+	}
+
+	/**
+	 * Similar to java.nio.file.Files.mismatch() - but this is not (yet) available
+	 */
+	public static boolean filesMismatch(Path path1, Path path2) throws IOException {
+		if (Files.size(path1) != Files.size(path2)) {
+			return true;
+		}
+
+		try (InputStream is1 = new BufferedInputStream(Files.newInputStream(path1));
+			 InputStream is2 = new BufferedInputStream(Files.newInputStream(path2))) {
+			int byte1, byte2;
+			while ((byte1 = is1.read()) != -1 && (byte2 = is2.read()) != -1) {
+				if (byte1 != byte2) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	@SuppressWarnings("unused")
