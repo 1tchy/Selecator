@@ -7,3 +7,9 @@ For example, when you want to move your best family moments to a folder shared (
 
 Just select two directories on your device and swipe the images back and forth.
 
+New Release
+-----------
+. Go to the Google Play Console > "Testen und veröffentlichen" > "Produktion" > "Neuen Release erstellen"
+. Android Studio > "Build" > "Generate Signed App Bundle or APK..." > "Android App Bundle" > Next > Next > Create
+. The rest with common sense :-)
+
